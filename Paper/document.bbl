@@ -1,0 +1,464 @@
+\begin{thebibliography}{42}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\href}[2]{#2}
+\providecommand{\path}[1]{#1}
+\providecommand{\DOIprefix}{doi:}
+\providecommand{\ArXivprefix}{arXiv:}
+\providecommand{\URLprefix}{URL: }
+\providecommand{\Pubmedprefix}{pmid:}
+\providecommand{\doi}[1]{\href{http://dx.doi.org/#1}{\path{#1}}}
+\providecommand{\Pubmed}[1]{\href{pmid:#1}{\path{#1}}}
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Misc
+\bibitem[{{American Public Transportation Association
+  (APTA)}(2025)}]{APTA_2025}
+\bibinfo{author}{{American Public Transportation Association (APTA)}},
+  \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{2025 vehicle database}.
+\newblock \bibinfo{howpublished}{Available at:
+  \url{https://www.apta.com/news-research/public-transit-statistics/vehicle-database/}}.
+\newblock \bibinfo{note}{Accessed: 2026-01-20}.
+%Type = Article
+\bibitem[{Baita et~al.(2000)Baita, Pesenti, Ukovich and
+  Favaretto}]{Baita_2000_CER}
+\bibinfo{author}{Baita, F.}, \bibinfo{author}{Pesenti, R.},
+  \bibinfo{author}{Ukovich, W.}, \bibinfo{author}{Favaretto, D.},
+  \bibinfo{year}{2000}.
+\newblock \bibinfo{title}{A comparison of different solution approaches to the
+  vehicle scheduling problem in a practical case}.
+\newblock \bibinfo{journal}{Computers \& Operations Research}
+  \bibinfo{volume}{27}, \bibinfo{pages}{1249--1269}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0305054899000738},
+  \DOIprefix\doi{https://doi.org/10.1016/S0305-0548(99)00073-8}.
+%Type = Article
+\bibitem[{Berrebi et~al.(2021)Berrebi, Joshi and Watkins}]{Berrebi_2021_TRA}
+\bibinfo{author}{Berrebi, S.J.}, \bibinfo{author}{Joshi, S.},
+  \bibinfo{author}{Watkins, K.E.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{On bus ridership and frequency}.
+\newblock \bibinfo{journal}{Transportation Research Part A: Policy and
+  Practice} \bibinfo{volume}{148}, \bibinfo{pages}{140--154}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0965856421000604},
+  \DOIprefix\doi{https://doi.org/10.1016/j.tra.2021.03.005}.
+%Type = Article
+\bibitem[{Bunte and Kliewer(2009)}]{Bunte_2009_PT}
+\bibinfo{author}{Bunte, S.}, \bibinfo{author}{Kliewer, N.},
+  \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{An overview on vehicle scheduling models}.
+\newblock \bibinfo{journal}{Public Transport} \bibinfo{volume}{1},
+  \bibinfo{pages}{299--317}.
+\newblock \URLprefix \url{https://doi.org/10.1007/s12469-010-0018-5},
+  \DOIprefix\doi{10.1007/s12469-010-0018-5}.
+%Type = Techreport
+\bibitem[{{California Air Resources Board}(2018)}]{CARB_2018_CARB}
+\bibinfo{author}{{California Air Resources Board}}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Innovative Clean Transit (ICT) Regulation}.
+\newblock \bibinfo{type}{Technical Report}. California Air Resources Board.
+  \bibinfo{address}{Sacramento, CA}.
+\newblock \URLprefix
+  \url{https://ww2.arb.ca.gov/our-work/programs/innovative-clean-transit/about}.
+  \bibinfo{note}{the ICT regulation, adopted in December 2018, mandates that
+  all California public transit agencies transition to 100\% zero-emission bus
+  fleets by 2040. ZEB purchase requirements begin in 2023 for large agencies
+  and 2026 for smaller ones, escalating to 100\% of new purchases by 2029. The
+  regulation requires each agency to submit a ZEB Rollout Plan detailing
+  procurement, infrastructure, and workforce training timelines.}
+%Type = Article
+\bibitem[{Chen and Wang(2024)}]{Chen_2024_S}
+\bibinfo{author}{Chen, Z.}, \bibinfo{author}{Wang, H.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Total cost of ownership analysis of fuel cell
+  electric bus with different hydrogen supply alternatives}.
+\newblock \bibinfo{journal}{Sustainability} \bibinfo{volume}{16}.
+\newblock \URLprefix \url{https://www.mdpi.com/2071-1050/16/1/259},
+  \DOIprefix\doi{10.3390/su16010259}.
+%Type = Article
+\bibitem[{Deb et~al.(2002)Deb, Pratap, Agarwal and Meyarivan}]{Deb_2002_TEC}
+\bibinfo{author}{Deb, K.}, \bibinfo{author}{Pratap, A.},
+  \bibinfo{author}{Agarwal, S.}, \bibinfo{author}{Meyarivan, T.},
+  \bibinfo{year}{2002}.
+\newblock \bibinfo{title}{A fast and elitist multiobjective genetic algorithm:
+  Nsga-ii}.
+\newblock \bibinfo{journal}{IEEE Transactions on Evolutionary Computation}
+  \bibinfo{volume}{6}, \bibinfo{pages}{182--197}.
+\newblock \DOIprefix\doi{10.1109/4235.996017}.
+%Type = Article
+\bibitem[{Erhardt et~al.(2022)Erhardt, Hoque, Goyal, Berrebi, Brakewood and
+  Watkins}]{Erhardt_2022_TRA}
+\bibinfo{author}{Erhardt, G.D.}, \bibinfo{author}{Hoque, J.M.},
+  \bibinfo{author}{Goyal, V.}, \bibinfo{author}{Berrebi, S.},
+  \bibinfo{author}{Brakewood, C.}, \bibinfo{author}{Watkins, K.E.},
+  \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Why has public transit ridership declined in the
+  united states?}
+\newblock \bibinfo{journal}{Transportation Research Part A: Policy and
+  Practice} \bibinfo{volume}{161}, \bibinfo{pages}{68--87}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0965856422000945},
+  \DOIprefix\doi{https://doi.org/10.1016/j.tra.2022.04.006}.
+%Type = Techreport
+\bibitem[{Eudy and Post(2021)}]{Eudy_2021_OSTI}
+\bibinfo{author}{Eudy, L.}, \bibinfo{author}{Post, M.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{SunLine Transit Agency Fuel Cell Electric Bus
+  Progress Report (Data Period Focus Jan-Jun 2020) [Slides]}.
+\newblock \bibinfo{type}{Technical Report}. National Renewable Energy
+  Laboratory (NREL), Golden, CO (United States).
+\newblock \URLprefix \url{https://www.osti.gov/biblio/1776707},
+  \DOIprefix\doi{10.2172/1776707}.
+%Type = Techreport
+\bibitem[{{Federal Transit Administration}(2022)}]{FTA_2022_FTA}
+\bibinfo{author}{{Federal Transit Administration}}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Zero Emission Fleet Transition Plan Requirements
+  Under the Bipartisan Infrastructure Law}.
+\newblock \bibinfo{type}{Technical Report}. U.S. Department of Transportation.
+  \bibinfo{address}{Washington, DC}.
+\newblock \URLprefix
+  \url{https://www.transit.dot.gov/funding/grants/zero-emission-fleet-transition-plan}.
+  \bibinfo{note}{under the Bipartisan Infrastructure Law, transit agencies
+  using the Low or No Emission Program must submit Zero Emission Fleet
+  Transition Plans covering six required elements, including workforce skill
+  gaps, training needs, and avoidance of worker displacement. The FTA guidance
+  outlines steps for developing these plans in partnership with labor
+  organizations.}
+%Type = Inproceedings
+\bibitem[{Feng(2024)}]{Feng_2024_ICECAI}
+\bibinfo{author}{Feng, H.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{An enhancing nsga-ii with neighborhood search-based
+  approach to customized bus route planning}, in: \bibinfo{booktitle}{2024 5th
+  International Conference on Electronic Communication and Artificial
+  Intelligence (ICECAI)}, pp. \bibinfo{pages}{52--59}.
+\newblock \DOIprefix\doi{10.1109/ICECAI62591.2024.10675026}.
+%Type = Article
+\bibitem[{Foda et~al.(2023)Foda, Abdelaty, Mohamed and
+  El-Saadany}]{Foda_2023_E}
+\bibinfo{author}{Foda, A.}, \bibinfo{author}{Abdelaty, H.},
+  \bibinfo{author}{Mohamed, M.}, \bibinfo{author}{El-Saadany, E.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{A generic cost-utility-emission optimization for
+  electric bus transit infrastructure planning and charging scheduling}.
+\newblock \bibinfo{journal}{Energy} \bibinfo{volume}{277},
+  \bibinfo{pages}{127592}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0360544223009866},
+  \DOIprefix\doi{https://doi.org/10.1016/j.energy.2023.127592}.
+%Type = Article
+\bibitem[{Foda and Mohamed(2024)}]{Foda_2024_TP}
+\bibinfo{author}{Foda, A.}, \bibinfo{author}{Mohamed, M.},
+  \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{The impacts of optimization approaches on beb system
+  configuration in transit}.
+\newblock \bibinfo{journal}{Transport Policy} \bibinfo{volume}{151},
+  \bibinfo{pages}{12--23}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0967070X24000891},
+  \DOIprefix\doi{https://doi.org/10.1016/j.tranpol.2024.03.015}.
+%Type = Article
+\bibitem[{Gkiotsalitis et~al.(2025)Gkiotsalitis, Rizopoulos, Merakou,
+  Iliopoulou, Liu and Cats}]{Gkiotsalitis_2025_AE}
+\bibinfo{author}{Gkiotsalitis, K.}, \bibinfo{author}{Rizopoulos, D.},
+  \bibinfo{author}{Merakou, M.}, \bibinfo{author}{Iliopoulou, C.},
+  \bibinfo{author}{Liu, T.}, \bibinfo{author}{Cats, O.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Electric bus charging station location selection
+  problem with slow and fast charging}.
+\newblock \bibinfo{journal}{Applied Energy} \bibinfo{volume}{382},
+  \bibinfo{pages}{125242}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0306261924026266},
+  \DOIprefix\doi{https://doi.org/10.1016/j.apenergy.2024.125242}.
+%Type = Article
+\bibitem[{Gomes et~al.(2000)Gomes, Selman, Crato and Kautz}]{Gomes_2000_JAR}
+\bibinfo{author}{Gomes, C.P.}, \bibinfo{author}{Selman, B.},
+  \bibinfo{author}{Crato, N.}, \bibinfo{author}{Kautz, H.},
+  \bibinfo{year}{2000}.
+\newblock \bibinfo{title}{Heavy-tailed phenomena in satisfiability and
+  constraint satisfaction problems}.
+\newblock \bibinfo{journal}{Journal of Automated Reasoning}
+  \bibinfo{volume}{24}, \bibinfo{pages}{67--100}.
+\newblock \URLprefix \url{https://doi.org/10.1023/A:1006314320276},
+  \DOIprefix\doi{10.1023/A:1006314320276}.
+%Type = Article
+\bibitem[{Hajela(1990)}]{Hajela_1990_AIAA}
+\bibinfo{author}{Hajela, P.}, \bibinfo{year}{1990}.
+\newblock \bibinfo{title}{Genetic search - an approach to the nonconvex
+  optimization problem}.
+\newblock \bibinfo{journal}{AIAA Journal} \bibinfo{volume}{28},
+  \bibinfo{pages}{1205--1210}.
+\newblock \DOIprefix\doi{https://doi.org/10.2514/3.25195}.
+%Type = Article
+\bibitem[{Hou et~al.(2022)Hou, Zhao and Dang}]{Hou_2022_EL}
+\bibinfo{author}{Hou, Y.}, \bibinfo{author}{Zhao, N.}, \bibinfo{author}{Dang,
+  L.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Solving multi-objective school bus routing problem
+  using an improved nsga-ii algorithm.}
+\newblock \bibinfo{journal}{Engineering Letters} \bibinfo{volume}{30},
+  \bibinfo{pages}{397--405}.
+\newblock \URLprefix
+  \url{https://research.ebsco.com/linkprocessor/plink?id=8c2fda97-72c2-3183-9165-bbb9633b2edf}.
+%Type = Misc
+\bibitem[{HVIP(2025)}]{CHVIP_2025}
+\bibinfo{author}{HVIP, C.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Heavy-duty bus}.
+\newblock \bibinfo{howpublished}{Available at:
+  \url{https://californiahvip.org/vehicle-category/transit-bus/}}.
+\newblock \bibinfo{note}{Accessed: 2026-02-04}.
+%Type = Misc
+\bibitem[{Jeffers and Eudy(2021)}]{Jeffers_2021_OSTI}
+\bibinfo{author}{Jeffers, M.}, \bibinfo{author}{Eudy, L.},
+  \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Foothill transit battery electric bus evaluation:
+  Final report}.
+\newblock \DOIprefix\doi{10.2172/1799885}.
+%Type = Techreport
+\bibitem[{Jeffers et~al.(2022)Jeffers, Kelly, Lipman, Fernandes Tomon~Avelino,
+  Johnson, Li, Post and Zhang}]{Jeffers_2022_OSTI}
+\bibinfo{author}{Jeffers, M.}, \bibinfo{author}{Kelly, K.},
+  \bibinfo{author}{Lipman, T.}, \bibinfo{author}{Fernandes Tomon~Avelino, A.},
+  \bibinfo{author}{Johnson, C.}, \bibinfo{author}{Li, M.},
+  \bibinfo{author}{Post, M.}, \bibinfo{author}{Zhang, Y.},
+  \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Comprehensive Review of California's Innovative Clean
+  Transit Regulation: Phase I Summary Report}.
+\newblock \bibinfo{type}{Technical Report}
+  \bibinfo{number}{NREL/TP-5400-81928}. National Renewable Energy Laboratory.
+\newblock \URLprefix \url{https://www.osti.gov/servlets/purl/1892294}.
+  \bibinfo{note}{prepared by NREL and UC Berkeley for CARB, this Phase I review
+  examines implementation progress, technology readiness, and California
+  transit agencies' preparedness to meet the 2023 ICT purchase requirements.
+  The report documents the state of BEB and FCEB deployments, infrastructure
+  development status, and remaining barriers to compliance across California
+  transit agencies.}
+%Type = Inproceedings
+\bibitem[{Jozefowiez et~al.(2006)Jozefowiez, Semet and
+  Talbi}]{Jozefowiez_2006_AE}
+\bibinfo{author}{Jozefowiez, N.}, \bibinfo{author}{Semet, F.},
+  \bibinfo{author}{Talbi, E.G.}, \bibinfo{year}{2006}.
+\newblock \bibinfo{title}{Enhancements of nsga ii and its application to the
+  vehicle routing problem with route balancing}, in: \bibinfo{editor}{Talbi,
+  E.G.}, \bibinfo{editor}{Liardet, P.}, \bibinfo{editor}{Collet, P.},
+  \bibinfo{editor}{Lutton, E.}, \bibinfo{editor}{Schoenauer, M.} (Eds.),
+  \bibinfo{booktitle}{Artificial Evolution}, \bibinfo{publisher}{Springer
+  Berlin Heidelberg}, \bibinfo{address}{Berlin, Heidelberg}. pp.
+  \bibinfo{pages}{131--142}.
+%Type = Article
+\bibitem[{Konstantakopoulos et~al.(2022)Konstantakopoulos, Gayialis and
+  Kechagias}]{Konstantakopoulos_2022_OR}
+\bibinfo{author}{Konstantakopoulos, G.D.}, \bibinfo{author}{Gayialis, S.P.},
+  \bibinfo{author}{Kechagias, E.P.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Vehicle routing problem and related algorithms for
+  logistics distribution: A literature review and classification}.
+\newblock \bibinfo{journal}{Operational research} \bibinfo{volume}{22},
+  \bibinfo{pages}{2033--2062}.
+%Type = Article
+\bibitem[{Li et~al.(2020)Li, Wang, Li, Feng, Wang and Cheng}]{Li_2020_JAT}
+\bibinfo{author}{Li, X.}, \bibinfo{author}{Wang, T.}, \bibinfo{author}{Li, L.},
+  \bibinfo{author}{Feng, F.}, \bibinfo{author}{Wang, W.},
+  \bibinfo{author}{Cheng, C.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Joint optimization of regular charging electric bus
+  transit network schedule and stationary charger deployment considering
+  partial charging policy and time-of-use electricity prices}.
+\newblock \bibinfo{journal}{Journal of Advanced Transportation}
+  \bibinfo{volume}{2020}, \bibinfo{pages}{8863905}.
+\newblock \URLprefix
+  \url{https://onlinelibrary.wiley.com/doi/abs/10.1155/2020/8863905},
+  \DOIprefix\doi{https://doi.org/10.1155/2020/8863905},
+  \href{http://arxiv.org/abs/https://onlinelibrary.wiley.com/doi/pdf/10.1155/2020/8863905}{{\tt
+  arXiv:https://onlinelibrary.wiley.com/doi/pdf/10.1155/2020/8863905}}.
+%Type = Article
+\bibitem[{Litman(2014)}]{Litman_2014_JPT}
+\bibinfo{author}{Litman, T.}, \bibinfo{year}{2014}.
+\newblock \bibinfo{title}{Evaluating public transportation local funding
+  options}.
+\newblock \bibinfo{journal}{Journal of Public Transportation}
+  \bibinfo{volume}{17}, \bibinfo{pages}{43--74}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S1077291X22001564},
+  \DOIprefix\doi{https://doi.org/10.5038/2375-0901.17.1.3}.
+%Type = Inproceedings
+\bibitem[{Mendes et~al.(2016)Mendes, Wanner, Sarubbi and
+  Martins}]{Mendes_2016_ITSC}
+\bibinfo{author}{Mendes, R.S.}, \bibinfo{author}{Wanner, E.F.},
+  \bibinfo{author}{Sarubbi, J.F.M.}, \bibinfo{author}{Martins, F.V.C.},
+  \bibinfo{year}{2016}.
+\newblock \bibinfo{title}{Optimization of the vehicle routing problem with
+  demand responsive transport using the nsga-ii algorithm}, in:
+  \bibinfo{booktitle}{2016 IEEE 19th International Conference on Intelligent
+  Transportation Systems (ITSC)}, pp. \bibinfo{pages}{2657--2662}.
+\newblock \DOIprefix\doi{10.1109/ITSC.2016.7795983}.
+%Type = Article
+\bibitem[{Mers et~al.(2024)Mers, Watkins and Hunter}]{Mers_2024_TRR}
+\bibinfo{author}{Mers, B.}, \bibinfo{author}{Watkins, K.},
+  \bibinfo{author}{Hunter, M.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Demographic breakdown of transit rider satisfaction}.
+\newblock \bibinfo{journal}{Transportation Research Record}
+  \bibinfo{volume}{2678}, \bibinfo{pages}{656--666}.
+\newblock \DOIprefix\doi{10.1177/03611981231198836}.
+%Type = Article
+\bibitem[{Pan and Qiu(2022)}]{Pan_2022_POM}
+\bibinfo{author}{Pan, Y.}, \bibinfo{author}{Qiu, L.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{How ride‐sharing is shaping public transit system:
+  A counterfactual estimator approach}.
+\newblock \bibinfo{journal}{Production and Operations Management}
+  \bibinfo{volume}{31}, \bibinfo{pages}{906--927}.
+\newblock \DOIprefix\doi{10.1111/poms.13582}.
+%Type = Inproceedings
+\bibitem[{Post(2023)}]{Post_2023_OSTI}
+\bibinfo{author}{Post, M.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Hydrogen fuel cell electric bus (fceb) evaluations in
+  us public transit service}, \bibinfo{organization}{National Renewable Energy
+  Laboratory (NREL), Golden, CO (United States)}.
+\newblock \URLprefix \url{https://www.osti.gov/biblio/1971855}.
+%Type = Article
+\bibitem[{Rogge et~al.(2018)Rogge, {van der Hurk}, Larsen and
+  Sauer}]{Rogge_2018_AE}
+\bibinfo{author}{Rogge, M.}, \bibinfo{author}{{van der Hurk}, E.},
+  \bibinfo{author}{Larsen, A.}, \bibinfo{author}{Sauer, D.U.},
+  \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Electric bus fleet size and mix problem with
+  optimization of charging infrastructure}.
+\newblock \bibinfo{journal}{Applied Energy} \bibinfo{volume}{211},
+  \bibinfo{pages}{282--295}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0306261917316355},
+  \DOIprefix\doi{https://doi.org/10.1016/j.apenergy.2017.11.051}.
+%Type = Article
+\bibitem[{Rout et~al.(2022)Rout, Li, Dupont and Wadud}]{Rout_2022_H}
+\bibinfo{author}{Rout, C.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Dupont,
+  V.}, \bibinfo{author}{Wadud, Z.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{A comparative total cost of ownership analysis of
+  heavy duty on-road and off-road vehicles powered by hydrogen, electricity,
+  and diesel}.
+\newblock \bibinfo{journal}{Heliyon} \bibinfo{volume}{8}.
+\newblock \URLprefix \url{https://doi.org/10.1016/j.heliyon.2022.e12417},
+  \DOIprefix\doi{10.1016/j.heliyon.2022.e12417}.
+%Type = Article
+\bibitem[{Sabet and Farooq(2022)}]{Sabet_2022_IA}
+\bibinfo{author}{Sabet, S.}, \bibinfo{author}{Farooq, B.},
+  \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Green vehicle routing problem: State of the art and
+  future directions}.
+\newblock \bibinfo{journal}{IEEE Access} \bibinfo{volume}{10},
+  \bibinfo{pages}{101622--101642}.
+\newblock \DOIprefix\doi{10.1109/ACCESS.2022.3208899}.
+%Type = Article
+\bibitem[{Siddiq et~al.(2023)Siddiq, Wasserman, Taylor and
+  Speroni}]{Siddiq_2023_PWMP}
+\bibinfo{author}{Siddiq, F.}, \bibinfo{author}{Wasserman, J.L.},
+  \bibinfo{author}{Taylor, B.D.}, \bibinfo{author}{Speroni, S.},
+  \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Transit’s financial prognosis: Findings from a
+  survey of u.s. transit systems during the covid-19 pandemic}.
+\newblock \bibinfo{journal}{Public Works Management \& Policy}
+  \bibinfo{volume}{28}, \bibinfo{pages}{393--415}.
+\newblock \DOIprefix\doi{10.1177/1087724X231160097}.
+%Type = Article
+\bibitem[{Sistig et~al.(2025)Sistig, Sinhuber, Rogge and
+  Sauer}]{Sistig_2025_SMT}
+\bibinfo{author}{Sistig, H.M.}, \bibinfo{author}{Sinhuber, P.},
+  \bibinfo{author}{Rogge, M.}, \bibinfo{author}{Sauer, D.U.},
+  \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Evaluating costs and operations of public bus fleet
+  electrification}.
+\newblock \bibinfo{journal}{npj Sustainable Mobility and Transport}
+  \bibinfo{volume}{2}, \bibinfo{pages}{15}.
+\newblock \URLprefix \url{https://doi.org/10.1038/s44333-025-00030-y},
+  \DOIprefix\doi{10.1038/s44333-025-00030-y}.
+%Type = Article
+\bibitem[{Sooktip and Wattanapongsakorn(2015)}]{Sooktip_2015_CC}
+\bibinfo{author}{Sooktip, T.}, \bibinfo{author}{Wattanapongsakorn, N.},
+  \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Identifying preferred solutions for multi-objective
+  optimization: application to capacitated vehicle routing problem}.
+\newblock \bibinfo{journal}{Cluster Computing} \bibinfo{volume}{18},
+  \bibinfo{pages}{1435--1448}.
+\newblock \URLprefix \url{https://doi.org/10.1007/s10586-015-0478-0},
+  \DOIprefix\doi{10.1007/s10586-015-0478-0}.
+%Type = Article
+\bibitem[{Tang et~al.(2021)Tang, Yang, Hao, Liu and Wang}]{Tang_2021_ITITS}
+\bibinfo{author}{Tang, J.}, \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Hao,
+  W.}, \bibinfo{author}{Liu, F.}, \bibinfo{author}{Wang, Y.},
+  \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{A data-driven timetable optimization of urban bus
+  line based on multi-objective genetic algorithm}.
+\newblock \bibinfo{journal}{IEEE Transactions on Intelligent Transportation
+  Systems} \bibinfo{volume}{22}, \bibinfo{pages}{2417--2429}.
+\newblock \DOIprefix\doi{10.1109/TITS.2020.3025031}.
+%Type = Article
+\bibitem[{Taylor and Norton(2009)}]{Taylor_2009_JPL}
+\bibinfo{author}{Taylor, B.D.}, \bibinfo{author}{Norton, A.T.},
+  \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{Paying for transportation: What’s a fair price?}
+\newblock \bibinfo{journal}{Journal of Planning Literature}
+  \bibinfo{volume}{24}, \bibinfo{pages}{22--36}.
+\newblock \DOIprefix\doi{10.1177/0885412209347156}.
+%Type = Article
+\bibitem[{Verma et~al.(2021)Verma, Pant and Snasel}]{Verma_2021_IA}
+\bibinfo{author}{Verma, S.}, \bibinfo{author}{Pant, M.},
+  \bibinfo{author}{Snasel, V.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{A comprehensive review on nsga-ii for multi-objective
+  combinatorial optimization problems}.
+\newblock \bibinfo{journal}{IEEE Access} \bibinfo{volume}{9},
+  \bibinfo{pages}{57757--57791}.
+\newblock \DOIprefix\doi{10.1109/ACCESS.2021.3070634}.
+%Type = Article
+\bibitem[{Wang et~al.(2022)Wang, Liao and Lu}]{Wang_2022_TRD}
+\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Liao, F.}, \bibinfo{author}{Lu,
+  C.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Integrated optimization of charger deployment and
+  fleet scheduling for battery electric buses}.
+\newblock \bibinfo{journal}{Transportation Research Part D: Transport and
+  Environment} \bibinfo{volume}{109}, \bibinfo{pages}{103382}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S1361920922002103},
+  \DOIprefix\doi{https://doi.org/10.1016/j.trd.2022.103382}.
+%Type = Article
+\bibitem[{Wang et~al.(2020)Wang, Zhang, Guan, Peng, Wang, Liu and
+  Xu}]{Wang_2020_ESA}
+\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Zhang, S.}, \bibinfo{author}{Guan,
+  X.}, \bibinfo{author}{Peng, S.}, \bibinfo{author}{Wang, H.},
+  \bibinfo{author}{Liu, Y.}, \bibinfo{author}{Xu, M.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Collaborative multi-depot logistics network design
+  with time window assignment}.
+\newblock \bibinfo{journal}{Expert Systems with Applications}
+  \bibinfo{volume}{140}, \bibinfo{pages}{112910}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0957417419306281},
+  \DOIprefix\doi{https://doi.org/10.1016/j.eswa.2019.112910}.
+%Type = Article
+\bibitem[{Wasserman and Taylor(2022)}]{Wasserman_2022_JPT}
+\bibinfo{author}{Wasserman, J.L.}, \bibinfo{author}{Taylor, B.D.},
+  \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Transit blues in the golden state: Regional transit
+  ridership trends in california}.
+\newblock \bibinfo{journal}{Journal of Public Transportation}
+  \bibinfo{volume}{24}, \bibinfo{pages}{100030}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S1077291X22000303},
+  \DOIprefix\doi{https://doi.org/10.1016/j.jpubtr.2022.100030}.
+%Type = Article
+\bibitem[{Watkins et~al.(2011)Watkins, Ferris, Borning, Rutherford and
+  Layton}]{Watkins_2011_TRA}
+\bibinfo{author}{Watkins, K.E.}, \bibinfo{author}{Ferris, B.},
+  \bibinfo{author}{Borning, A.}, \bibinfo{author}{Rutherford, G.S.},
+  \bibinfo{author}{Layton, D.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{Where is my bus? impact of mobile real-time
+  information on the perceived and actual wait time of transit riders}.
+\newblock \bibinfo{journal}{Transportation Research Part A: Policy and
+  Practice} \bibinfo{volume}{45}, \bibinfo{pages}{839--848}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S0965856411001030},
+  \DOIprefix\doi{https://doi.org/10.1016/j.tra.2011.06.010}.
+%Type = Article
+\bibitem[{Yao et~al.(2020)Yao, Liu, Lu and Yang}]{Yao_2020_SCS}
+\bibinfo{author}{Yao, E.}, \bibinfo{author}{Liu, T.}, \bibinfo{author}{Lu, T.},
+  \bibinfo{author}{Yang, Y.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Optimization of electric vehicle scheduling with
+  multiple vehicle types in public transport}.
+\newblock \bibinfo{journal}{Sustainable Cities and Society}
+  \bibinfo{volume}{52}, \bibinfo{pages}{101862}.
+\newblock \URLprefix
+  \url{https://www.sciencedirect.com/science/article/pii/S2210670719318098},
+  \DOIprefix\doi{https://doi.org/10.1016/j.scs.2019.101862}.
+
+\end{thebibliography}

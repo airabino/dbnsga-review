@@ -78,7 +78,7 @@ class Colormap():
 
                     colors += '_r'
 
-                self.cmap = matplotlib.cm.get_cmap(colors)
+                self.cmap = plt.colormaps.get_cmap(colors)
 
         else:
 

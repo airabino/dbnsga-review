@@ -50,3 +50,5 @@ python gtfs_to_graph.py Data/Unitrans -d 2026-03-16
 ```
 
 ## 6. Open Example.ipynb
+
+Example.ipynb contains an example using the Unitrans Case study

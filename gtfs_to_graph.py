@@ -38,8 +38,19 @@ arg_parser.add_argument(
     help = 'Active services to be used in graph creation. Overwritten by date.',
     )
 arg_parser.add_argument(
-    '-w', '--window', type = float, default = 7200., dest = 'window',
+    '-w', '--window', type = float, default = 1800., dest = 'window',
     help = 'Maximum time between trip end and subsequent trip start for an edge',
+    )
+arg_parser.add_argument(
+    '-r', '--radius', type = float, default = np.inf, dest = 'radius',
+    help = 'Maximum distance between trip end and subsequent trip start for an edge',
+    )
+arg_parser.add_argument(
+    '-p', '--portion', type = float, default = np.inf, dest = 'portion',
+    help = (
+        'Maximum time between trip end and subsequent trip start for an edge' +
+        ' as a portion of trip duration'
+        ),
     )
 arg_parser.add_argument(
     '-rr', '--remake_roadmap', action = 'store_true', dest = 'remake_roadmap',
@@ -81,6 +92,8 @@ def main(**kwargs):
     date = kwargs['date']
     services = kwargs['services']
     window = kwargs['window']
+    radius = kwargs['radius']
+    portion = kwargs['portion']
     remake_roadmap = kwargs['remake_roadmap']
     remake_locations = kwargs['remake_locations']
     remake_trips = kwargs['remake_trips']
@@ -375,12 +388,18 @@ def main(**kwargs):
                 
                 n_t = f'{target['shape_id']}_s'
 
+                if locations._adj[n_s][n_t]['distance'] > radius:
+
+                    continue
+
                 transit = locations._adj[n_s][n_t]['duration']
+
+                buffer = min([window, source['duration'] * (portion)])
 
                 start_feasible = (
                     target['start'] >= source['finish'] + transit
                 )
-                finish_feasible = target['start'] <= source['finish'] + transit + window
+                finish_feasible = target['start'] <= source['finish'] + buffer
 
                 if start_feasible and finish_feasible:
 

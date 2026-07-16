@@ -8,6 +8,7 @@ The following instructions assume an Anaconda installation. It is reccommended t
 
 ```bash
 conda create -n my_env python=3.12
+conda activate my_env
 ```
 
 ## 2. Make an ipykernel for the env
@@ -51,4 +52,4 @@ python gtfs_to_graph.py Data/Unitrans -d 2026-03-16
 
 ## 6. Open Example.ipynb
 
-Example.ipynb contains an example using the Unitrans Case study
+Example.ipynb contains an example optimization for the Unitrans Case Study. The example shows how to build the network and run the optimization in either Python or Rust.

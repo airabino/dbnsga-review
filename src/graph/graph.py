@@ -89,11 +89,11 @@ def graph_from_json(filename, **kwargs):
 
 def graph_from_nlg(nlg, **kwargs):
 
-    return nx.node_link_graph(nlg, **kwargs)
+    return nx.node_link_graph(nlg, edges = 'links', **kwargs)
 
 def nlg_from_graph(nlg, **kwargs):
 
-    nlg = nx.node_link_data(nlg, **kwargs)
+    nlg = nx.node_link_data(nlg, edges = 'links', **kwargs)
 
     return nlg
 

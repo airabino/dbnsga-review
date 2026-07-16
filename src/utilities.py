@@ -5,6 +5,17 @@ import numpy as np
 from scipy.stats import t
 from shutil import get_terminal_size
 
+def pick_one_from_each(data, rng):
+
+    lengths = np.array([len(d) for d in data])
+    ratios = 1 / lengths
+
+    rn = rng.uniform(0, 1, size = len(data))
+
+    indices = (rn // ratios).astype(int)
+
+    return [d[indices[i]] for i, d in enumerate(data)]
+
 def super_quantile(x, alpha, discretization = .01):
     
     q = np.arange(alpha, .99, discretization)

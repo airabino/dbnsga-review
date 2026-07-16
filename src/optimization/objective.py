@@ -1,5 +1,7 @@
 import numpy as np
 
+from collections import defaultdict
+
 from scipy.stats import norm
 
 class Objective():
@@ -24,7 +26,7 @@ class Routes_Filled():
 
     def __init__(self, **kwargs):
 
-        self.included = kwargs.get('included', [])
+        self.minimize = kwargs.get('minimize', True)
 
     def evaluate_solution(self, network, solution):
 
@@ -37,7 +39,7 @@ class Routes_Filled():
 
             total_trips += len(tour['trips']) - 2
 
-            if not tour['vehicle'].type in self.included:
+            if not tour['vehicle'].type == 'Null':
 
                 filled_trips += len(tour['trips']) - 2
 
@@ -246,6 +248,10 @@ class Capital_Cost(Objective):
 
 class Initial_Cost(Objective):
 
+    def __init__(self, **kwargs):
+
+        self.penlaties = kwargs.get('penalties', {})
+
     def evaluate_solution(self, network, solution):
 
         cost = 0.
@@ -266,7 +272,11 @@ class Initial_Cost(Objective):
 
         cost = 0.
 
+        depot_totals = {}
+
         for depot, vehicles in solution.vehicles.items():
+
+            depot_totals[depot] = 0
 
             depot_types = []
 
@@ -274,12 +284,19 @@ class Initial_Cost(Objective):
 
                 initial_cost = vehicle.unit_cost
 
+                depot_totals[depot] += 1
+
                 if not vehicle.type in depot_types:
 
                     initial_cost += vehicle.fixed_cost
                     depot_types.append(vehicle.type)
 
                 cost += initial_cost
+
+            # if depot in self.penlaties:
+            #     if 'vehicles' in self.penlaties[depot]:
+
+            #         cost += self.penlaties[depot]['vehicles'](depot_totals[depot])
 
         return cost
 
@@ -390,6 +407,149 @@ class Daily_Cost(Objective):
 
             cost += event['energy'] * port.operational_cost
             cost += event['energy'] * port.emissions * self.emissions_cost
+
+        return cost
+
+    def vehicles(self, network, solution):
+
+        '''
+        Time costs - costs like driver pay which scale with time not
+        spent in depots
+        '''
+
+        cost = 0.
+
+        for tour in solution.tours:
+
+            vehicle = tour['vehicle']
+
+            cost += tour['duration'] * vehicle.operational_cost
+
+        return cost
+
+class Daily_Cost_Detailed(Objective):
+    '''
+    Operational costs scale with operational time - i.e. time not in depot.
+    The amount of operational time per investment period is computed as follows:
+
+    1. From the state occupation stationary distribution, the portion of total
+    tiem that is operational time is computed
+    2. Operational time portion is multiplied by the total_time_per_period
+    attribute to produce total operational time
+    3. Total operational time is multiplied by the operational_cost attribute
+    of the vehicle
+    '''
+
+    def __init__(self, tariff, **kwargs):
+
+        self.tariff = tariff
+
+    def energy_cost(self, tariff, events):
+
+        period_finishes = np.array([c['finish'] for c in tariff['energy']])
+        rates = np.array([c['rate'] for c in tariff['energy']])
+
+        intervals = np.arange(
+            0, max([e['finish'] for e in events]) + tariff['interval'],
+            tariff['interval']
+        )
+
+        interval_indices = np.digitize(intervals, period_finishes)
+
+        interval_rates = rates[interval_indices]
+        # print(interval_rates * 3.6e6)
+
+        starts = intervals[:-1]
+        finishes = intervals[1:]
+
+        energy = np.array([0. for _ in range(len(intervals))])
+        power = np.array([0. for _ in range(len(intervals))])
+
+        # Energy and power for each rate period
+        for event in events:
+
+            start_idx = np.digitize(event['start'], starts)
+            finish_idx = np.digitize(event['finish'], finishes)
+
+            # print(start_idx)
+
+            intervening = list(range(start_idx + 1, finish_idx))
+
+            time = np.array([0 for _ in range(len(intervals))])
+
+            if start_idx == finish_idx:
+
+                time[start_idx] = event['finish'] - event['start']
+
+            else:
+            
+                time[start_idx] = intervals[start_idx] - event['start']
+                time[finish_idx] = event['finish'] - intervals[finish_idx]
+
+            for idx in intervening:
+
+                time[idx] = finishes[idx] - starts[idx]
+
+            energy += time / time.sum() * event['energy']
+            power += (
+                (time > 0 ) * event['energy'] / (event['finish'] - event['start'])
+            )
+
+        energy_cost = np.sum(energy * interval_rates)
+        power_cost = 0.
+
+        max_power = power.max()
+
+        for bracket in tariff['power']:
+
+            if max_power >= bracket['min']:
+
+                if max_power > bracket['max']:
+
+                    power_cost += bracket['rate'] * (bracket['max'] - bracket['min'])
+
+                else:
+
+                    power_cost += bracket['rate'] * (max_power - bracket['min'])
+
+        return energy_cost + power_cost / tariff['billing_cycle']
+
+    def evaluate_solution(self, network, solution):
+
+        cost = 0.
+
+        cost += self.vehicles(network, solution)
+        cost += self.stations(network, solution)
+
+        # print(cost)
+
+        return cost
+
+    def describe(self, network, solution, cost = {}):
+
+        cost['vehicles'] = self.vehicles(network, solution)
+        cost['stations'] = self.stations(network, solution)
+
+        return cost
+
+    def stations(self, network, solution):
+        '''
+        Station operational  costs scale with energy dispensed
+        '''
+
+        cost = 0.
+
+        depot_supply_type = defaultdict(list)
+
+        for event in solution.supply_events:
+
+            energy_type = network.port_types[event['supply_type']].energy_type
+
+            depot_supply_type[(event['depot'], energy_type)].append(event)
+
+        for k, events in depot_supply_type.items():
+
+            cost += self.energy_cost(self.tariff[k[1]], events)
 
         return cost
 

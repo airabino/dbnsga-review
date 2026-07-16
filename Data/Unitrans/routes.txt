@@ -1,0 +1,23 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+A,unitrans,A,Amtrak/5th/Alhambra,3,E4A800,FFFFFF
+B,unitrans,B,Sycamore/Drake,3,0E6734,FFFFFF
+C,unitrans,C,Sycamore/Wake Forest/Cuarto Dorms,3,D1509D,FFFFFF
+D,unitrans,D,Lake/Arlington,3,2E3092,FFFFFF
+E,unitrans,E,Downtown/F St/J St,3,94CA63,FFFFFF
+F,unitrans,F,Oak/Anderson/F St,3,652C90,FFFFFF
+FMS,unitrans,FMS,Farmers Market Shuttle,3,F04C4F,FFFFFF
+G,unitrans,G,Anderson/Alvarado/N Sycamore/MU Terminal,3,00AEC1,FFFFFF
+J,unitrans,J,Anderson/Alvarado/N Sycamore/Silo Terminal,3,F26D28,FFFFFF
+K,unitrans,K,Lake/Arlington/Arthur,3,4DC9F4,FFFFFF
+L,unitrans,L,E 8th/Pole Line/Moore/Loyola,3,F68D41,FFFFFF
+M,unitrans,M,B St/Cowell/Drew,3,AB1D53,FFFFFF
+O,unitrans,O,Amtrak/5th/Alhambra/Target,3,8F5CA5,FFFFFF
+P,unitrans,P,Davis Perimeter Counter Clockwise,3,ED1C24,FFFFFF
+Q,unitrans,Q,Davis Perimeter Clockwise,3,ED1C24,FFFFFF
+T,unitrans,T,Davis Senior High School,3,E88689,FFFFFF
+U,unitrans,U,West Village via MU Terminal,3,61A543,FFFFFF
+V,unitrans,V,West Village - ALL STOPS,3,59A96A,FFFFFF
+VL,unitrans,VL,West Village Limited - Sol & Ramble Only,3,7EC683,FFFFFF
+VX,unitrans,VX,West Village Express - The Green ONLY,3,254D32,FFFFFF
+W,unitrans,W,Cowell/Lillard/Drummond,3,1B75BB,FFFFFF
+Z,unitrans,Z,Amtrak/Cantrill/5th,3,007F7F,FFFFFF

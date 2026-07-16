@@ -1,0 +1,10 @@
+fare_product_id,fare_product_name,rider_category_id,fare_container_id,bundle_amount,duration_start,duration_amount,duration_unit,duration_type,offset_amount,offset_unit,service_id,timeframe_id,timeframe_type,cap_required,amount,min_amount,max_amount,currency
+10-ride,10-Ride Ticket,,,10,,,,,,,,,,,9.50,,,USD
+Monthly,Monthly Pass,,,,,1,5,1,,,,,,,38.00,,,USD
+Quarterly,Quarterly Pass,,,,,3,5,1,,,,,,,97.00,,,USD
+Annual,Annual Pass,,,,,1,6,1,,,,,,,270.00,,,USD
+Undergraduate,Undergraduate Pass,UC Davis Undergraduate,,,,,,,,,,,,,0.00,,,USD
+Senior,Access Pass (S),Senior,,,,,,,,,,,,,0.00,,,USD
+Discount,Access Pass (D),Discount,,,,,,,,,,,,,0.00,,,USD
+Youth,Youth Pass,Youth,,,,,,,,,,,,,0.00,,,USD
+Single-ride,Single Ride,Single-ride,,,,,,,,,,,,,1.50,,,USD

@@ -1,0 +1,58 @@
+[
+    {
+        "type": "AC-PLUG",
+        "supply_type": "",
+        "resupply_rate": 19000.0,
+        "emissions": 6.267129466666666e-05,
+        "operating_time": 180,
+        "efficiency": 1,
+        "fixed_cost": 10000.0,
+        "unit_cost": 5000.0,
+        "annual_cost": 1000.0,
+        "disposal_cost": 0,
+        "service_periods": 10,
+        "operational_cost": 2.777777777777778e-08
+    },
+    {
+        "type": "DC-PLUG",
+        "supply_type": "",
+        "resupply_rate": 150000.0,
+        "emissions": 6.267129466666666e-05,
+        "operating_time": 180,
+        "efficiency": 1,
+        "fixed_cost": 50000.0,
+        "unit_cost": 30000.0,
+        "annual_cost": 1000.0,
+        "disposal_cost": 0,
+        "service_periods": 10,
+        "operational_cost": 4.166666666666666e-08
+    },
+    {
+        "type": "LH2-PUMP",
+        "supply_type": "",
+        "resupply_rate": 10950000.0,
+        "emissions": 8.953042095238095e-05,
+        "operating_time": 180,
+        "efficiency": 1,
+        "fixed_cost": 2500000.0,
+        "unit_cost": 100000.0,
+        "annual_cost": 250000.0,
+        "disposal_cost": 0,
+        "service_periods": 10,
+        "operational_cost": 4.166666666666666e-08
+    },
+    {
+        "type": "DIESEL-PUMP",
+        "supply_type": "",
+        "resupply_rate": 15540000.0,
+        "emissions": 7.642642642642643e-05,
+        "operating_time": 180,
+        "efficiency": 1,
+        "fixed_cost": 50000.0,
+        "unit_cost": 30000.0,
+        "annual_cost": 1000.0,
+        "disposal_cost": 0,
+        "service_periods": 10,
+        "operational_cost": 4.166666666666666e-08
+    }
+]

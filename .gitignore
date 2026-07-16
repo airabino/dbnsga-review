@@ -1,8 +1,13 @@
 #Data file structure
 
-Output/
+locations.json
+trips.json
+roadmap.json
+
+rust_env
 
 # Byte-compiled / optimized / DLL files
+cache/
 __pycache__/
 *.py[cod]
 *$py.class

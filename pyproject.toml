@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "fleet-opt-core"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Rust core for vehicle fleet optimization (PyO3 + Rayon)"
+
+[tool.maturin]
+# The compiled Rust extension will be importable as `import fleet_opt_core`
+module-name = "fleet_opt_core"

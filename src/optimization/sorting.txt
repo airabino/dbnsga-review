@@ -12,19 +12,14 @@ def fast_non_dominated_sort_vectorized(candidates):
 
     scores = np.array(candidates).T
 
-    at_least_as_good = np.ones((n, n), dtype = int)
-    better_than = np.zeros((n, n), dtype = int)
-
-    # dominance = np.ones((n, n), dtype = int)
+    dominance = np.ones((n, n), dtype = int)
 
     for score in scores:
 
         s_r, s_c = np.meshgrid(score, score, indexing = 'ij')
 
-        at_least_as_good *= (s_r <= s_c)
-        better_than = better_than | (s_r < s_c)
-
-    dominance = at_least_as_good & better_than
+        dominance *= (s_r < s_c)
+        dominance *= (s_r != s_c)
 
     domination_counter = {i: k for i, k in enumerate(dominance.sum(axis = 0))}
 
@@ -128,7 +123,7 @@ def crowding_distance_assignment(candidates):
 
         indices = np.argsort([c[i] for c in candidates])
 
-        denominator = (candidates[indices[-1]][i] - candidates[indices[0]][i])
+        denominator = (candidates[-1][i] - candidates[0][i])
 
         if denominator == 0:
 
@@ -151,26 +146,3 @@ def crowding_distance_assignment(candidates):
 
 
     return list(np.flip(np.argsort(list(distances.values()))))
-
-def crowding_distance_generator(candidates):
-
-    to_str = lambda c: ''.join(str(s) for s in c)
-
-    reverse = {to_str(v): i for i, v in enumerate(candidates)}
-
-    for _ in range(len(candidates)):
-
-        indices = crowding_distance_assignment(candidates)
-
-        best = indices[-1]
-        val = to_str(candidates[best])
-        
-        candidates = candidates[:best] + candidates[best + 1:]
-
-        yield reverse[val]
-
-def n_highest_spread(candidates, n):
-
-    ordered_indices = list(crowding_distance_generator(candidates))
-
-    return ordered_indices[len(candidates) - n:]

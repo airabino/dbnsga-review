@@ -10,6 +10,19 @@ from heapq import heappush, heappop
 from copy import copy, deepcopy
 from scipy.stats import mode
 
+def pick_one_from_each(data, rng):
+
+    data = [d if len(d) > 0 else [None] for d in data]
+
+    lengths = np.array([len(d) for d in data])
+    ratios = 1 / lengths
+
+    rn = rng.uniform(0, 1, size = len(data))
+
+    indices = (rn // ratios).astype(int)
+
+    return [d[indices[i]] for i, d in enumerate(data)]
+
 class Solution():
 
     idx = 0
@@ -19,9 +32,6 @@ class Solution():
         self.iidx = self.idx
         self.increment()
 
-        # self.network = network
-
-        self.feasible = True # Can the energy balance be solved?
         self.compliant = True # Are all constraints met?
 
         self.vehicles = defaultdict(list)
@@ -29,6 +39,7 @@ class Solution():
 
         self.successors = kwargs.get('successors', None)
         self.equipment = kwargs.get('equipment', None)
+        self.depot = kwargs.get('depot', None)
         self.supply_type = kwargs.get('supply_type', None)
 
         self.fitness = {}
@@ -39,7 +50,19 @@ class Solution():
 
         self.depots = (
             [k for k, v in network.locations._node.items() if v['type'] == 'depot']
-            ) #Unneccesary
+            )
+
+        self.depot_probabilities = np.array(
+            [network.locations[d].get('probability', 1.) for d in self.depots]
+            )
+        self.depot_probabilities /= self.depot_probabilities.sum()
+
+        self.vehicle_types = list(network.vehicle_types.keys())
+
+        self.vehicle_type_probabilities = np.array(
+            [getattr(v, 'probability', 1.) for v in network.vehicle_types.values()]
+            )
+        self.vehicle_type_probabilities /= self.vehicle_type_probabilities.sum()
 
     @classmethod
     def increment(self):
@@ -62,13 +85,8 @@ class Solution():
         output = {
             'successors': deepcopy(self.successors),
             'equipment': deepcopy(self.equipment),
+            'depot': deepcopy(self.depot),
             'supply_type': deepcopy(self.supply_type),
-            'vehicles': {d: [vi.type for vi in v] for d, v in self.vehicles.items()},
-            'ports': {d: [vi.type for vi in v] for d, v in self.ports.items()},
-            'rank': deepcopy(self.rank),
-            'age': deepcopy(self.age),
-            'fitness': deepcopy(self.fitness),
-            'compliant': deepcopy(self.compliant),
         }
 
         return output
@@ -77,6 +95,7 @@ class Solution():
 
         self.successors = data['successors']
         self.equipment = data['equipment']
+        self.depot = data['depot']
         self.supply_type = data['supply_type']
 
         self.solve(network)
@@ -85,186 +104,100 @@ class Solution():
         return self
 
     def mate_mutate(self, network, partner, **kwargs):
-        '''
-        Contains the Mate and Mutate operators
-        '''
+
+        child = self.mate(network, partner, **kwargs)
+        child.mutate(network, **kwargs)
+
+        return child
+
+    def mate(self, network, partner, **kwargs):
 
         # Inputs
         crossover_probability = kwargs.get('crossover_probability', 0.5)
-        mutation_probability = kwargs.get('mutation_probability', 0.)
         rng = kwargs.get('rng', None)
 
         if rng is None:
 
             rng = np.random.default_rng()
 
-        # print('a', rng.bit_generator.state['state']['state'])
-
         # Copying successors structure for child
         successors = {
-            k: v for k, v in self.successors.items() if not v in self.depots
+            k: v for k, v in self.successors.items() if not v == 'depot'
         }
         predecessors = {v: k for k, v in successors.items()}
-
+        
         # Random selection of partner genes to contribute to child
-        rn_crossover = rng.uniform(0, 1, size = len(partner.successors))
+        partner_successors = {
+            k: v for k, v in partner.successors.items() if not v == 'depot'
+        }
+
+        rn_crossover = rng.uniform(0, 1, size = len(partner_successors))
 
         contribution = {}
         inverse_contribution = {}
 
-        for idx, (k, v) in enumerate(partner.successors.items()):
+        for idx, (k, v) in enumerate(partner_successors.items()):
 
             # Crossover
-            if (rn_crossover[idx] <= crossover_probability) and (not v in self.depots):
+            if rn_crossover[idx] <= crossover_probability:
 
                 contribution[k] = v
                 inverse_contribution[v] = k
 
-        # Random mutation of the crossover genes
-        rn_mutation = rng.uniform(0, 1, size = len(partner.successors))
-
-        for idx, (k, v) in enumerate(partner.successors.items()):
-
-            #Mutation
-            if rn_mutation[idx] <= mutation_probability:
-
-                potential_targets = list(
-                    set(list(network.trips.successors(k)))
-                )
-
-                potential_targets.sort()
-
-                if not potential_targets:
-
-                    continue
-
-                target = rng.choice(potential_targets)
-
-                if k in contribution:
-
-                    _ = inverse_contribution.pop(contribution[k])
-
-                if target in inverse_contribution:
-
-                    conflict_key = inverse_contribution[target]
-                    _ = contribution.pop(conflict_key)
-
-                contribution[k] = target
-                inverse_contribution[target] = k
-
-        # Integrating the crossover / mutation
+        # Integrating the crossover
         for source, target in contribution.items():
 
-            # If the target is not in predecessors it means that source: target
-            # can be added without needing to resolve a conflict. If target is
-            # in predecessors a conflict needs to be resolved.
-            if target in predecessors:
+            conflict_target = successors.pop(source, None)
+            _ = predecessors.pop(conflict_target, None)
 
-                if source in successors:
+            conflict_source = predecessors.pop(target, None)
+            _ = successors.pop(conflict_source, None)
 
-                    # Identifying the conflict key
-                    conflict_key = predecessors[target]
+            # Adding the contribution value
+            successors[source] = target
 
-                    # Identifying and popping the conflict value
-                    conflict_value = successors.pop(source)
+            # Updating predecessors
+            predecessors[target] = source
 
-                    # Adding the contribution value
-                    successors[source] = target
-                    predecessors[target] = source
+            if conflict_target in network.trips._adj.get(conflict_source, []):
 
-                    if conflict_value in network.trips._adj[conflict_key]:
-
-                        # Swapping values if valid
-                        successors[conflict_key] = conflict_value
-                        predecessors[conflict_value] = conflict_key
-
-                    else:
-
-                        # Otherwise drop the conflicts
-                        _ = successors.pop(conflict_key)
-                        _ = predecessors.pop(conflict_value)
-
-                else:
-
-                    # Identifying the conflict key
-                    conflict_key = predecessors[target]
-
-                    _ = successors.pop(conflict_key)
-
-                    # Adding the contribution value
-                    successors[source] = target
-
-                    # Updating predecessors
-                    predecessors[target] = source
-
-            else:
-
-                # Adding the contribution value
-                successors[source] = target
-
-                # Updating predecessors
-                predecessors[target] = source
+                successors[conflict_source] = conflict_target
+                predecessors[conflict_target] = conflict_source
 
         # Adding depots as successors where successor trips are not defined
-        # rn_depots = rng.choice(self.depots, size = len(self.successors))
-        for idx, source in enumerate(self.successors.keys()):
+        for idx, source in enumerate(network.trips.nodes()):
             if not source in successors:
 
-                # successors[source] = rn_depots[idx]
-                rn_depot = rng.choice(
-                    network.trips._node[source]['depots'],
-                    )
-                successors[source] = rn_depot
+                successors[source] = 'depot'
 
         # Copying equipment for child
-        rn = rng.uniform(0, 1, size = len(self.equipment))
+        depot = {k: v for k, v in self.depot.items()}
         equipment = {k: v for k, v in self.equipment.items()}
         supply_type = {k: v for k, v in self.supply_type.items()}
 
-        for idx, (k, v) in enumerate(partner.equipment.items()):
-            if rn[idx] <= crossover_probability:
-
-                equipment[k] = v
-                supply_type[k] = partner.supply_type[k]
-
-        # Mutating equipment
         rn = rng.uniform(0, 1, size = len(self.equipment))
 
-        p = np.array(
-            [getattr(v, 'probability', 1.) for v in network.vehicle_types.values()]
-            )
-        p /= p.sum()
-
-        vehicle_types = list(network.vehicle_types.keys())
-        selected = rng.choice(vehicle_types, size = len(network.trips.nodes), p = p)
-
-        for idx, source in enumerate(equipment.keys()):
-
-            if rn[idx] <= mutation_probability:
-
-                equipment[source] = selected[idx]
-
-                rn_supply_type = rng.choice(
-                    network.vehicle_types[equipment[source]].supply_types
-                )
-
-                supply_type[source] = rn_supply_type
+        for idx, (k, v) in enumerate(partner.equipment.items()):
+            if rn[idx] <= crossover_probability:
+                
+                equipment[k] = v
+                depot[k] = partner.depot[k]
+                supply_type[k] = partner.supply_type[k]
 
         child = Solution(network)
 
         child.successors = successors
         child.equipment = equipment
+        child.depot = depot
         child.supply_type = supply_type
 
         return child
 
-    def mate_mutate1(self, network, partner, **kwargs):
-        '''
-        Contains the Mate and Mutate operators
-        '''
+    def mutate(self, network, **kwargs):
+
+        # print('b', sum([v is None for v in self.successors.values()]))
 
         # Inputs
-        crossover_probability = kwargs.get('crossover_probability', 0.5)
         mutation_probability = kwargs.get('mutation_probability', 0.)
         rng = kwargs.get('rng', None)
 
@@ -272,172 +205,94 @@ class Solution():
 
             rng = np.random.default_rng()
 
-        # print('a', rng.bit_generator.state['state']['state'])
+        predecessors = {v: k for k, v in self.successors.items()}
 
-        # Copying successors structure for child
-        successors = {
-            k: v for k, v in self.successors.items()
-        }
-        predecessors = {v: k for k, v in successors.items() if not v in self.depots}
+        rn_mutation = rng.uniform(0, 1, size = len(self.successors))
 
-        # Random selection of partner genes to contribute to child
-        rn_crossover = rng.uniform(0, 1, size = len(partner.successors))
+        selected_sources = [
+            s for i, s in enumerate(network.trips.nodes()) \
+            if rn_mutation[i] <= mutation_probability
+            ]
 
-        contribution = {}
-        inverse_contribution = {}
+        possible_targets = (
+            [list(network.trips.successors(s)) for s in selected_sources]
+            )
+        selected_targets = pick_one_from_each(possible_targets, rng)
+        
+        mutated_genes = {
+            s: selected_targets[i] for i, s in enumerate(selected_sources)
+            }
 
-        for idx, (k, v) in enumerate(partner.successors.items()):
+        # Integrating the mutated genes
+        for source, target in mutated_genes.items():
 
-            # Crossover
-            if (rn_crossover[idx] <= crossover_probability):
-
-                contribution[k] = v
-                inverse_contribution[v] = k
-
-        # Random mutation of the crossover genes
-        rn_mutation = rng.uniform(0, 1, size = len(partner.successors))
-
-        for idx, (k, v) in enumerate(partner.successors.items()):
-
-            #Mutation
-            if rn_mutation[idx] <= mutation_probability:
-
-                potential_targets = list(
-                    set(list(network.trips.successors(k)))
-                )
-
-                potential_targets.sort()
-
-                if not potential_targets:
-
-                    continue
-
-                target = rng.choice(potential_targets)
-
-                if k in contribution:
-
-                    _ = inverse_contribution.pop(contribution[k], None)
-
-                if target in inverse_contribution:
-
-                    conflict_key = inverse_contribution[target]
-                    _ = contribution.pop(conflict_key)
-
-                contribution[k] = target
-                inverse_contribution[target] = k
-
-        # Integrating the crossover / mutation
-        for source, target in contribution.items():
-
-            if target in self.depots:
-
-                # Adding the contribution value
-                successors[source] = target
+            if target is None:
 
                 continue
 
-            # If the target is not in predecessors it means that source: target
-            # can be added without needing to resolve a conflict. If target is
-            # in predecessors a conflict needs to be resolved.
-            if target in predecessors:
+            conflict_target = self.successors.pop(source, None)
+            _ = predecessors.pop(conflict_target, None)
 
-                if source in successors:
+            conflict_source = predecessors.pop(target, None)
+            _ = self.successors.pop(conflict_source, None)
 
-                    # Identifying the conflict key
-                    conflict_key = predecessors[target]
+            # Adding the contribution value
+            self.successors[source] = target
 
-                    # Identifying and popping the conflict value
-                    conflict_value = successors.pop(source)
+            # Updating predecessors
+            predecessors[target] = source
 
-                    # Adding the contribution value
-                    successors[source] = target
-                    predecessors[target] = source
+            if conflict_target in network.trips._adj.get(conflict_source, []):
 
-                    if conflict_value in network.trips._adj[conflict_key]:
+                # print(conflict_target, conflict_source)
 
-                        # Swapping values if valid
-                        successors[conflict_key] = conflict_value
-                        predecessors[conflict_value] = conflict_key
+                self.successors[conflict_source] = conflict_target
+                predecessors[conflict_target] = conflict_source
 
-                    else:
-
-                        # Otherwise drop the conflicts
-                        _ = successors.pop(conflict_key)
-                        _ = predecessors.pop(conflict_value, None)
-
-                else:
-
-                    # Identifying the conflict key
-                    conflict_key = predecessors[target]
-
-                    _ = successors.pop(conflict_key)
-
-                    # Adding the contribution value
-                    successors[source] = target
-
-                    # Updating predecessors
-                    predecessors[target] = source
-
-            else:
-
-                # Adding the contribution value
-                successors[source] = target
-
-                # Updating predecessors
-                predecessors[target] = source
+        # print('c', sum([v is None for v in self.successors.values()]))
 
         # Adding depots as successors where successor trips are not defined
-        # rn_depots = rng.choice(self.depots, size = len(self.successors))
-        for idx, source in enumerate(self.successors.keys()):
-            if not source in successors:
+        for idx, source in enumerate(network.trips.nodes()):
+            if not source in self.successors:
 
-                # successors[source] = rn_depots[idx]
-                rn_depot = rng.choice(
-                    network.trips._node[source]['depots'],
-                    )
-                successors[source] = rn_depot
+                self.successors[source] = 'depot'
 
-        # Copying equipment for child
-        rn = rng.uniform(0, 1, size = len(self.equipment))
-        equipment = {k: v for k, v in self.equipment.items()}
-        supply_type = {k: v for k, v in self.supply_type.items()}
+        # Mutating depot
+        # selected_depot = rng.choice(
+        #     rng.permutation(list(self.depot.values())), size = len(network.trips.nodes),
+        #     )
 
-        for idx, (k, v) in enumerate(partner.equipment.items()):
-            if rn[idx] <= crossover_probability:
-
-                equipment[k] = v
-                supply_type[k] = partner.supply_type[k]
+        selected_depot = rng.choice(
+            self.depots, size = len(network.trips.nodes),
+            p = self.depot_probabilities
+            )
 
         # Mutating equipment
+        # selected = rng.choice(
+        #     rng.permutation(list(self.equipment.values())), size = len(network.trips.nodes),
+        #     )
+        
+        selected = rng.choice(
+            self.vehicle_types, size = len(network.trips.nodes),
+            p = self.vehicle_type_probabilities
+            )
+
+        # Mutating supply type
+        supply_type_choices = (
+            [network.vehicle_types[v].supply_types for v in selected]
+            )
+
+        supply_type_selections = pick_one_from_each(supply_type_choices, rng)
+
         rn = rng.uniform(0, 1, size = len(self.equipment))
 
-        p = np.array(
-            [getattr(v, 'probability', 1.) for v in network.vehicle_types.values()]
-            )
-        p /= p.sum()
-
-        vehicle_types = list(network.vehicle_types.keys())
-        selected = rng.choice(vehicle_types, size = len(network.trips.nodes), p = p)
-
-        for idx, source in enumerate(equipment.keys()):
+        for idx, source in enumerate(self.equipment.keys()):
 
             if rn[idx] <= mutation_probability:
 
-                equipment[source] = selected[idx]
-
-                rn_supply_type = rng.choice(
-                    network.vehicle_types[equipment[source]].supply_types
-                )
-
-                supply_type[source] = rn_supply_type
-
-        child = Solution(network)
-
-        child.successors = successors
-        child.equipment = equipment
-        child.supply_type = supply_type
-
-        return child
+                self.equipment[source] = selected[idx]
+                self.depot[source] = selected_depot[idx]
+                self.supply_type[source] = supply_type_selections[idx]
 
     def generate_successors(self, network, rng = None):
 
@@ -460,11 +315,7 @@ class Solution():
 
                 continue
 
-            potential_targets = (
-                # [t for t in _adj.keys() if not t in targets] + self.depots
-                [t for t in _adj.keys() if not t in targets] +
-                network.trips._node[source]['depots']
-            )
+            potential_targets = [t for t in _adj.keys() if not t in targets] + ['depot']
 
             target = rng.choice(potential_targets)
 
@@ -481,10 +332,9 @@ class Solution():
 
             rng = np.random.default_rng()
 
-        p = np.array(
-            [getattr(v, 'probability', 1.) for v in network.vehicle_types.values()]
-            )
+        p = rng.uniform(0, 1, size = (len(network.vehicle_types)))
         p /= p.sum()
+
 
         vehicle_types = list(network.vehicle_types.keys())
         selected = rng.choice(vehicle_types, size = len(network.trips.nodes), p = p)
@@ -492,6 +342,21 @@ class Solution():
         equipment = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
         return equipment
+
+    def generate_depot(self, network, rng = None):
+
+        if rng is None:
+
+            rng = np.random.default_rng()
+
+        p = rng.uniform(0, 1, size = (len(self.depots)))
+        p /= p.sum()
+
+        selected = rng.choice(self.depots, size = len(network.trips.nodes), p = p)
+
+        depot = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
+
+        return depot
 
     def generate_supply(self, network, equipment, rng = None):
         '''
@@ -502,15 +367,15 @@ class Solution():
 
             rng = np.random.default_rng()
 
-        supply_type = {}
+        supply_type_choices = (
+            [network.vehicle_types[v].supply_types for v in equipment.values()]
+            )
 
-        for trip, vehicle_type in equipment.items():
+        supply_type_selections = pick_one_from_each(supply_type_choices, rng)
 
-            # print(vehicle_type, network.vehicle_types[vehicle_type].supply_types)
-
-            supply_type[trip] = rng.choice(
-                network.vehicle_types[vehicle_type].supply_types
-                )
+        supply_type = {
+            k: supply_type_selections[i] for i, k in enumerate(equipment.keys())
+            }
 
         return supply_type
 
@@ -522,6 +387,7 @@ class Solution():
 
         self.successors = self.generate_successors(network, rng = rng)
         self.equipment = self.generate_equipment(network, rng = rng)
+        self.depot = self.generate_depot(network, rng = rng)
         self.supply_type = self.generate_supply(network, self.equipment, rng = rng)
 
         return self
@@ -529,10 +395,7 @@ class Solution():
     def solve_and_evaluate(self, network, **kwargs):
 
         self.solve(network, **kwargs)
-
-        if self.feasible:
-
-            self.evaluate(network)
+        self.evaluate(network)
 
     def evaluate(self, network):
 
@@ -560,9 +423,24 @@ class Solution():
         # Recovering the tours
         tours = self._tours()
 
-        tours = self._tour_information(network, tours)
+        # a = np.unique(list(self.successors.keys()))
+        # b = np.unique([t for tour in tours for t in tour['trips']])
 
-        tours = self._tour_vehicle_type_assignment(tours)
+        # c = np.setdiff1d(a, b)
+
+        # print('a', sum([v is None for v in self.successors.values()]))
+
+        # predecessors = defaultdict(list)
+
+        # for k, v in self.successors.items():
+
+        #     predecessors[v].append(k)
+
+        # print([(ci, self.successors[ci]) for ci in c])
+
+        tours = self._voting(tours)
+
+        tours = self._tour_information(network, tours)
 
         tours = self._vehicle_assignment(network, tours)
 
@@ -675,7 +553,7 @@ class Solution():
                     'vehicle': tours[tour_0_idx]['vehicle'],
                     'vehicle_idx': tours[tour_0_idx]['vehicle_idx'],
                     'supply_type': tours[tour_0_idx]['supply_type'],
-                    'depot': tours[tour_0_idx]['trips'][-1],
+                    'depot': tours[tour_0_idx]['depot'],
                     'earliest_start': tours[tour_0_idx]['finish'],
                     'latest_finish': tours[tour_1_idx]['start'],
                     'energy': tours[tour_0_idx]['energy'],
@@ -687,7 +565,7 @@ class Solution():
                 'vehicle': tours[tour_indices[-1]]['vehicle'],
                 'vehicle_idx': tours[tour_indices[-1]]['vehicle_idx'],
                 'supply_type': tours[tour_indices[-1]]['supply_type'],
-                'depot': tours[tour_indices[-1]]['trips'][-1],
+                'depot': tours[tour_indices[-1]]['depot'],
                 'earliest_start': tours[tour_indices[-1]]['finish'],
                 'latest_finish': 24 * 3600 + schedule_start,
                 'energy': tours[tour_indices[-1]]['energy'],
@@ -768,26 +646,20 @@ class Solution():
 
                 split_idx = len(tour['trips']) // 2
 
-                self.successors[tour['trips'][split_idx - 1]] = tour['trips'][-1]
-
-                # print('s', tour['trips'][split_idx], split_idx)
-                # print(tour['trips'])
+                self.successors[tour['trips'][split_idx - 1]] = 'depot'
 
                 new_tours = [
                     {
-                        'trips': tour['trips'][:split_idx] + [tour['trips'][-1]],
+                        'trips': tour['trips'][:split_idx],
                         'vehicle_type': tour['vehicle_type'],
                         'supply_type': tour['supply_type'],
                     },
                     {
-                        'trips': [tour['trips'][0]] + tour['trips'][split_idx:],
+                        'trips': tour['trips'][split_idx:],
                         'vehicle_type': tour['vehicle_type'],
                         'supply_type': tour['supply_type'],
                     }
                 ]
-
-                # print('')
-                # print(new_tours)
 
                 new_tours = self._tour_information(network, new_tours)
 
@@ -823,28 +695,34 @@ class Solution():
 
         return completed_tours
 
-    def _tour_vehicle_type_assignment(self, tours, **kwargs):
+    def _voting(self, tours, **kwargs):
 
         for idx, tour in enumerate(tours):
 
-            trip_types = [self.equipment[t] for t in tour['trips'][1:-1]]
+            # Voting on depot
+            trip_depots = [self.depot[t] for t in tour['trips']]
+            selected_depot = Counter(trip_depots).most_common(1)[0][0]
 
-            selected = Counter(trip_types).most_common(1)[0][0]
+            # Voting on vehicle type
+            trip_vehicle_types = [self.equipment[t] for t in tour['trips']]
+            selected_vehicle_type = Counter(trip_vehicle_types).most_common(1)[0][0]
 
-            supply_types = (
-                [self.supply_type[t] for t in tour['trips'][1:-1] \
-                if self.equipment[t] == selected]
+            # Voting on supply type
+            trip_supply_types = (
+                [self.supply_type[t] for t in tour['trips'] \
+                if self.equipment[t] == selected_vehicle_type]
                 )
+            selected_supply_type = Counter(trip_supply_types).most_common(1)[0][0]
 
-            selected_supply = Counter(supply_types).most_common(1)[0][0]
+            for trip in tour['trips']:
 
-            for trip in tour['trips'][1:-1]:
+                self.depot[trip] = selected_depot
+                self.equipment[trip] = selected_vehicle_type
+                self.supply_type[trip] = selected_supply_type
 
-                self.equipment[trip] = selected
-                self.supply_type[trip] = selected_supply
-
-            tour['vehicle_type'] = selected
-            tour['supply_type'] = selected_supply
+            tour['depot'] = selected_depot
+            tour['vehicle_type'] = selected_vehicle_type
+            tour['supply_type'] = selected_supply_type
 
         return tours
 
@@ -856,16 +734,12 @@ class Solution():
 
             predecessors[v].append(k)
 
-        origins = self.depots
-
         tours = []
 
         heap = []
         c = count()
 
-        for origin in origins:
-
-            heappush(heap, (0, next(c), origin, [origin]))
+        heappush(heap, (0, next(c), 'depot', ['depot']))
 
         while heap:
 
@@ -873,7 +747,7 @@ class Solution():
 
             if not predecessors[source]:
 
-                tours.append({'trips': [tour_trips[-1]] + tour_trips})
+                tours.append({'trips': tour_trips[:-1]})
 
             else:
 
@@ -885,63 +759,6 @@ class Solution():
 
         return tours
 
-    def _tour_information_old(self, network, tours, **kwargs):
-
-        trips = network.trips
-        locations = network.locations
-
-        for tour in tours:
-
-            tour_trips = tour['trips']
-            depot = tour['trips'][0]
-
-            first_trip_start = trips._node[tour_trips[1]]['start']
-            first_trip_location = trips._node[tour_trips[1]]['location']
-            tour_start = (
-                first_trip_start -
-                locations._adj[depot][first_trip_location]['duration']
-            )
-
-            duration = 0
-            distance = 0
-
-            # First_depot_leg
-            s_location = tour_trips[0]
-            t_location = trips._node[tour_trips[1]]['location']
-
-            duration += locations._adj[s_location][t_location].get('duration', 0)
-            distance += locations._adj[s_location][t_location].get('distance', 0)
-
-            duration += trips._node[tour_trips[1]].get('duration', 0)
-            distance += trips._node[tour_trips[1]].get('distance', 0)
-
-            # Trips
-            for s, t in pairwise(tour_trips[1:-1]):
-
-                s_location = trips._node[s].get('location', depot)
-                t_location = trips._node[t].get('location', depot)
-
-                duration += locations._adj[s_location][t_location].get('duration', 0)
-                distance += locations._adj[s_location][t_location].get('distance', 0)
-
-                duration += trips._node[t].get('duration', 0)
-                distance += trips._node[t].get('distance', 0)
-
-            # Second_depot_leg
-            s_location = trips._node[tour_trips[-2]]['location']
-            t_location = tour_trips[-1]
-
-            duration += locations._adj[s_location][t_location].get('duration', 0)
-            distance += locations._adj[s_location][t_location].get('distance', 0)
-
-            tour['start'] = tour_start
-            tour['finish'] = tour_start + duration
-            tour['distance'] = distance
-            tour['duration'] = duration
-            tour['depot'] = tour['trips'][0]
-
-        return tours
-
     def _tour_information(self, network, tours, **kwargs):
 
         trips = network.trips
@@ -950,10 +767,10 @@ class Solution():
         for tour in tours:
 
             tour_trips = tour['trips']
-            depot = tour['trips'][0]
+            depot = tour['depot']
 
-            first_trip_start = trips._node[tour_trips[1]]['start']
-            first_trip_location = trips._node[tour_trips[1]]['start_location']
+            first_trip_start = trips._node[tour_trips[0]]['start']
+            first_trip_location = trips._node[tour_trips[0]]['start_location']
             tour_start = (
                 first_trip_start -
                 locations._adj[depot][first_trip_location]['duration']
@@ -963,17 +780,17 @@ class Solution():
             distance = 0
 
             # First_depot_leg
-            s_location = tour_trips[0]
-            t_location = trips._node[tour_trips[1]]['start_location']
+            s_location = depot
+            t_location = trips._node[tour_trips[0]]['start_location']
 
             duration += locations._adj[s_location][t_location].get('duration', 0)
             distance += locations._adj[s_location][t_location].get('distance', 0)
 
-            duration += trips._node[tour_trips[1]].get('duration', 0)
-            distance += trips._node[tour_trips[1]].get('distance', 0)
+            duration += trips._node[tour_trips[0]].get('duration', 0)
+            distance += trips._node[tour_trips[0]].get('distance', 0)
 
             # Trips
-            for s, t in pairwise(tour_trips[1:-1]):
+            for s, t in pairwise(tour_trips):
 
                 s_location = trips._node[s].get('finish_location', depot)
                 t_location = trips._node[t].get('start_location', depot)
@@ -985,8 +802,8 @@ class Solution():
                 distance += trips._node[t].get('distance', 0)
 
             # Second_depot_leg
-            s_location = trips._node[tour_trips[-2]]['finish_location']
-            t_location = tour_trips[-1]
+            s_location = trips._node[tour_trips[-1]]['finish_location']
+            t_location = depot
 
             duration += locations._adj[s_location][t_location].get('duration', 0)
             distance += locations._adj[s_location][t_location].get('distance', 0)
@@ -995,6 +812,5 @@ class Solution():
             tour['finish'] = tour_start + duration
             tour['distance'] = distance
             tour['duration'] = duration
-            tour['depot'] = tour['trips'][0]
 
         return tours

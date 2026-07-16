@@ -7,6 +7,7 @@ import networkx as nx
 
 from heapq import heappush, heappop
 from itertools import count, batched, permutations
+
 from copy import copy, deepcopy
 
 from .solution import Solution
@@ -16,6 +17,31 @@ from .sorting import crowding_distance_assignment
 
 from ..progress_bar import ProgressBar
 from ..graph import cypher
+
+class NpEncoder(json.JSONEncoder):
+    '''
+    Encoder to allow for numpy types to be converted to default types for
+    JSON serialization. For use with json.dump(s)/load(s).
+    '''
+    def default(self, obj):
+
+        if isinstance(obj, np.integer):
+
+            return int(obj)
+
+        if isinstance(obj, np.floating):
+
+            return float(obj)
+
+        if isinstance(obj, np.ndarray):
+
+            return obj.tolist()
+
+        if isinstance(obj, np.bool_):
+
+            return int(obj)
+
+        return super(NpEncoder, self).default(obj)
 
 def _time(func):
 
@@ -43,11 +69,12 @@ def population_to_dict(population):
         data = {
             'rank': deepcopy(solution.rank),
             'age': deepcopy(solution.age),
-            'feasible': deepcopy(solution.feasible),
             'compliant': deepcopy(solution.compliant),
             'fitness': deepcopy(solution.fitness),
             'successors': deepcopy(solution.successors),
+            'depot': deepcopy(solution.depot),
             'equipment': deepcopy(solution.equipment),
+            'supply_type': deepcopy(solution.supply_type),
             'tours': deepcopy(solution.tours),
             'supply_events': deepcopy(solution.supply_events),
             'vehicles': {d: [vi.type for vi in v] for d, v in solution.vehicles.items()},
@@ -108,7 +135,7 @@ class Network():
 
         with open(path, 'w') as file:
 
-            json.dump(data, file, indent = 4)
+            json.dump(data, file, indent = 4, cls = NpEncoder)
 
     def optimize(self, rng = None, initial_population = None, **kwargs):
 
@@ -133,6 +160,7 @@ class Network():
 
         # Settings
         store = kwargs.get('store', True)
+        store_interval = kwargs.get('store_interval', 1)
 
         # Arguments for ProgressBar
         progress_bar_kw = kwargs.get('progress_bar_kw', {})
@@ -190,6 +218,8 @@ class Network():
         # Running NSGA
         for idx in ProgressBar(range(max_iter), **progress_bar_kw):
 
+            t0 = time.time()
+
             rng = np.random.default_rng(seeds[idx])
 
             for solution in population:
@@ -212,8 +242,16 @@ class Network():
                 )
 
             if store:
+                if (idx + 1) % store_interval == 0:
 
-                generations[idx + 1] = self.statistics(population)
+                    generations[idx + 1] = self.statistics(population)
+
+            # print(
+            #     time.time() - t0,
+            #     np.mean([len(s.tours) for s in population]),
+            #     np.mean([len(np.unique([t for tour in s.tours for t in tour['trips']])) for s in population]),
+            #     np.mean([sum([len(t['trips']) for t in s.tours]) for s in population])
+            #     )
 
             remaining_offspring = len([p for p in population if p.age == 0])
 
@@ -257,33 +295,27 @@ class Network():
 
     def rank_population(self, population, **kwargs):
 
-        # Selecting only feasible solutions
-        feasible_solutions = [s for s in population if s.feasible]
-        viable_solutions = [s for s in feasible_solutions if s.compliant]
-        non_viable_solutions = [s for s in feasible_solutions if not s.compliant]
+        viable_solutions = [s for s in population if s.compliant]
+        non_viable_solutions = [s for s in population if not s.compliant]
+
+        min_non_viable_rank = 1
 
         # Determining rank for viable solutions
-        if len(viable_solutions) > 0:
-
+        if viable_solutions:
+            
             rank = fast_non_dominated_sort_vectorized(
                 [list(s.fitness.values()) for s in viable_solutions]
                 )
+
+            min_non_viable_rank = max(list(rank.values())) + 1
 
             for idx, solution in enumerate(viable_solutions):
 
                 solution.rank = rank[idx]
 
-            min_non_viable_rank = max(list(rank.values())) + 1
-
-        else:
-
-            min_non_viable_rank = 0
-
         # Determining rank for non-viable solutions (strictly higher than all
         # viable solutions).
-        if len(non_viable_solutions) > 0:
-
-            
+        if non_viable_solutions:
 
             rank = fast_non_dominated_sort_vectorized(
                 [list(s.fitness.values()) for s in non_viable_solutions]
@@ -292,8 +324,6 @@ class Network():
             for idx, solution in enumerate(non_viable_solutions):
 
                 solution.rank = rank[idx] + min_non_viable_rank
-
-        # print(len(viable_solutions), len(non_viable_solutions))
 
         population = viable_solutions + non_viable_solutions
 

@@ -39,6 +39,9 @@ class Vehicle_Type():
 		# Energy consumption rate
 		self.consumption = kwargs.get('consumption', 1)
 
+		# Probability for generation and mutation
+		self.probability = kwargs.get('probability', 1.0)
+
 	def energy(self, tour, **kwargs):
 
 		energy_consumed = self.consumption * tour['distance']

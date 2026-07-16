@@ -1,0 +1,6 @@
+rider_category_id,rider_category_name,min_age,max_age,is_default_fare_category,eligibility_url
+Single-ride,Single Ride,,,1,https://unitrans.ucdavis.edu/passes
+UC Davis Undergraduate,UCD Undergraduate Student,,,0,https://unitrans.ucdavis.edu/passes
+Senior,Seniors 60 and Older,60,,0,https://unitrans.ucdavis.edu/passes
+Discount,Customers with Disabilities,,,0,https://unitrans.ucdavis.edu/passes
+Youth,Youth 18 and Under,,18,0,https://unitrans.ucdavis.edu/passes

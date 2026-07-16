@@ -11,7 +11,7 @@ class Port_Type():
 		self.type = kwargs.get('type', 'port')
 
 		# Supply type
-		self.supply_type = kwargs.get('supply_type', '')
+		self.energy_type = kwargs.get('energy_type', '')
 
 		# Maximum rate of energy resupply
 		self.resupply_rate = kwargs.get('resupply_rate', 1)

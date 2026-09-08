@@ -22,11 +22,12 @@ from .optimization import Solution
 # Objective class name → Rust ObjectiveKind string
 # ---------------------------------------------------------------------------
 _OBJECTIVE_KIND_MAP = {
-    'Initial_Cost':    'InitialCost',
-    'Daily_Cost':      'DailyCost',
-    'Capital_Cost':    'Capital',
-    'Operational_Cost':'Operational',
-    'Emissions_Cost':  'Emissions',
+    'Initial_Cost':          'InitialCost',
+    'Daily_Cost':            'DailyCost',
+    'Capital_Cost':          'Capital',
+    'Operational_Cost':     'Operational',
+    'Emissions_Cost':        'Emissions',
+    'Minimize_Fleet_Portion':'FleetPortion',
 }
 
 def _objective_params(obj):
@@ -222,9 +223,10 @@ def build_rust_network(network):
     # -----------------------------------------------------------------------
     # 8. Objective configuration
     # -----------------------------------------------------------------------
-    objective_kinds       = []
-    objective_params_list = []
-    objective_names       = list(network.objectives.keys())
+    objective_kinds          = []
+    objective_params_list    = []
+    objective_included_types = []
+    objective_names          = list(network.objectives.keys())
 
     for obj in network.objectives.values():
         class_name = type(obj).__name__
@@ -236,6 +238,11 @@ def build_rust_network(network):
             )
         objective_kinds.append(kind)
         objective_params_list.append(_objective_params(obj))
+        objective_included_types.append([
+            vt_name_to_idx[name]
+            for name in getattr(obj, 'included', [])
+            if name in vt_name_to_idx
+        ])
 
     # -----------------------------------------------------------------------
     # 9. Constraint configuration
@@ -284,7 +291,7 @@ def build_rust_network(network):
         pt_resupply_rates, pt_operating_times, pt_efficiencies,
         pt_fixed_costs, pt_unit_costs, pt_annual_costs, pt_disposal_costs,
         pt_service_periods, pt_operational_costs, pt_emissions,
-        objective_kinds, objective_params_list, objective_names,
+        objective_kinds, objective_params_list, objective_included_types, objective_names,
         fleet_portion_included, fleet_portion_min,
         port_limits, lot_size_limits,
     )

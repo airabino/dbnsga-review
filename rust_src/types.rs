@@ -213,6 +213,15 @@ pub enum ObjectiveKind {
     /// Sum of port.emissions × event.energy over all supply events.
     /// Mirrors Python's Emissions_Cost.
     Emissions,
+    /// Fraction of the fleet (across all depots) whose vehicle type is in
+    /// `included`. Minimizing this drives the optimizer away from the
+    /// listed vehicle types (e.g. ICEVs). Mirrors Python's
+    /// Minimize_Fleet_Portion — same counting logic as the Fleet_Portion
+    /// constraint, but returned as a cost rather than checked against a
+    /// minimum.
+    FleetPortion {
+        included: Vec<usize>,
+    },
 }
 
 /// Active constraint configuration for a run.

@@ -36,6 +36,9 @@ pub fn evaluate(data: &NetworkData, solution: &mut Solution) {
             ObjectiveKind::Emissions => {
                 emissions_cost(data, solution)
             }
+            ObjectiveKind::FleetPortion { included } => {
+                fleet_portion_cost(solution, included)
+            }
         };
         solution.fitness.push(value);
     }
@@ -218,6 +221,24 @@ fn emissions_cost(
     solution.supply_events.iter()
         .map(|e| e.energy * data.port_types[e.port_type_idx].emissions)
         .sum()
+}
+
+// ---------------------------------------------------------------------------
+// FleetPortion objective — fraction of the fleet (across all depots) whose
+// vehicle type is in `included`. Mirrors Python's Minimize_Fleet_Portion.
+// ---------------------------------------------------------------------------
+
+fn fleet_portion_cost(solution: &Solution, included: &[usize]) -> f64 {
+    let total: usize = solution.vehicles.iter().map(|v| v.len()).sum();
+    if total == 0 {
+        return 0.0;
+    }
+
+    let count: usize = solution.vehicles.iter().flatten()
+        .filter(|&&vt_idx| included.contains(&vt_idx))
+        .count();
+
+    count as f64 / total as f64
 }
 
 // ---------------------------------------------------------------------------

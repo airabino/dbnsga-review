@@ -104,6 +104,13 @@ class Network():
         # Objective objects used for evaluation
         self.objectives = kwargs.get('objectives', {})
 
+        if not self.objectives:
+
+            raise ValueError(
+                'Network requires at least one objective; got an empty '
+                '`objectives` dict.'
+                )
+
         # Constraint objects used for evaluation
         self.constraints = kwargs.get('constraints', {})
 

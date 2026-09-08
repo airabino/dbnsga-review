@@ -66,8 +66,10 @@ impl RustNetwork {
     ///   pt_service_periods (i64), pt_operational_costs
     ///
     /// Objective configuration:
-    ///   objective_kinds: list[str]  — e.g. ["InitialCost", "DailyCost"]
-    ///   objective_params: list[dict[str, float]]  — per-objective parameters
+    ///   objective_kinds: list[str]  — e.g. ["InitialCost", "DailyCost", "FleetPortion"]
+    ///   objective_params: list[dict[str, float]]  — per-objective numeric parameters
+    ///   objective_included_types: list[list[int]]  — per-objective vehicle type
+    ///     indices; only meaningful for "FleetPortion" (empty list otherwise)
     ///
     /// Constraint configuration:
     ///   fleet_portion_included: list[int]  — vehicle type indices
@@ -118,6 +120,7 @@ impl RustNetwork {
         // --- Objective and constraint configuration ---
         objective_kinds:  Vec<String>,
         objective_params: Vec<HashMap<String, f64>>,
+        objective_included_types: Vec<Vec<usize>>,
         objective_names:  Vec<String>,
         fleet_portion_included: Vec<usize>,
         fleet_portion_min: f64,
@@ -243,8 +246,15 @@ impl RustNetwork {
         let objectives: Vec<ObjectiveKind> = objective_kinds
             .iter()
             .zip(objective_params.iter())
-            .map(|(kind, params)| parse_objective(kind, params))
+            .zip(objective_included_types.iter())
+            .map(|((kind, params), included)| parse_objective(kind, params, included))
             .collect::<PyResult<Vec<_>>>()?;
+
+        if objectives.is_empty() {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "RustNetwork requires at least one objective; got an empty objective_kinds list."
+            ));
+        }
 
         // -----------------------------------------------------------------
         // Constraints
@@ -545,6 +555,7 @@ impl RustNetwork {
 fn parse_objective(
     kind: &str,
     params: &HashMap<String, f64>,
+    included: &[usize],
 ) -> PyResult<ObjectiveKind> {
     match kind {
         "InitialCost" => Ok(ObjectiveKind::InitialCost),
@@ -559,9 +570,12 @@ fn parse_objective(
             discount_rate:        params.get("discount_rate").copied().unwrap_or(0.0),
         }),
         "Emissions" => Ok(ObjectiveKind::Emissions),
+        "FleetPortion" => Ok(ObjectiveKind::FleetPortion {
+            included: included.to_vec(),
+        }),
         other => Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Unknown objective kind '{}'. Valid kinds: \
-             InitialCost, DailyCost, Capital, Operational, Emissions",
+             InitialCost, DailyCost, Capital, Operational, Emissions, FleetPortion",
             other
         ))),
     }

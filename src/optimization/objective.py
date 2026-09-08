@@ -569,3 +569,32 @@ class Daily_Cost_Detailed(Objective):
             cost += tour['duration'] * vehicle.operational_cost
 
         return cost
+
+class Minimize_Fleet_Portion(Objective):
+    '''
+    Calculates the portion of vehicles defined in 'included' argument and returns as cost.
+    '''
+    def __init__(self, **kwargs):
+
+        self.included = kwargs.get('included', [])
+    
+    def evaluate_solution(self, network, solution):
+
+        cost = 0.
+
+        n_included = 0
+        n_total = 0
+
+        for depot, vehicles in solution.vehicles.items():
+
+            for vehicle in vehicles:
+
+                n_total += 1
+
+                if vehicle.type in self.included:
+
+                    n_included += 1
+
+        cost = n_included / n_total
+
+        return cost

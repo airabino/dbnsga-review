@@ -3,6 +3,7 @@ import numpy as np
 
 from itertools import count
 from collections import deque
+from copy import deepcopy
 
 def fast_non_dominated_sort_vectorized(candidates):
     #candidates - list of tuples
@@ -174,3 +175,51 @@ def n_highest_spread(candidates, n):
     ordered_indices = list(crowding_distance_generator(candidates))
 
     return ordered_indices[len(candidates) - n:]
+
+def dense_rank_single_objective(candidates):
+    '''
+    Single-objective drop-in for fast_non_dominated_sort_vectorized.
+
+    candidates - list of 1-length sequences (one fitness value each)
+
+    At m = 1, Pareto dominance (at-least-as-good-everywhere, strictly-better-
+    somewhere) collapses to a plain '<' comparison, so ranking is just the
+    dense rank of each value in sorted order (ties share a rank). This
+    produces identical rank values to fast_non_dominated_sort_vectorized at
+    m = 1, in O(n log n) instead of O(n^2).
+    '''
+
+    values = np.array([c[0] for c in candidates])
+
+    _, inverse = np.unique(values, return_inverse = True)
+
+    return {i: int(r) for i, r in enumerate(inverse)}
+
+def truncate_by_rank(population, population_size, rng = None):
+    '''
+    Single-objective drop-in for the rank/crowding-distance front-filling
+    loop in Network.cull_population.
+
+    Since ties in single-objective rank correspond to identical fitness
+    values, any tie-break among them yields the same fitness distribution,
+    so a stable sort on .rank followed by truncation is sufficient - no
+    crowding distance or front-by-front bookkeeping needed.
+    '''
+
+    if rng is None:
+
+        rng = np.random.default_rng()
+
+    order = np.argsort([s.rank for s in population], kind = 'stable')
+
+    next_generation = [population[i] for i in order[:population_size]]
+
+    if len(next_generation) < population_size:
+
+        remaining = population_size - len(next_generation)
+
+        next_generation.extend(
+            [deepcopy(s) for s in rng.choice(next_generation, size = remaining)]
+            )
+
+    return next_generation

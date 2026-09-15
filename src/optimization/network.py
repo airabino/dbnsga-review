@@ -14,6 +14,8 @@ from .solution import Solution
 from .sorting import fast_non_dominated_sort
 from .sorting import fast_non_dominated_sort_vectorized
 from .sorting import crowding_distance_assignment
+from .sorting import dense_rank_single_objective
+from .sorting import truncate_by_rank
 
 from ..progress_bar import ProgressBar
 from ..graph import cypher
@@ -111,6 +113,11 @@ class Network():
                 '`objectives` dict.'
                 )
 
+        # When there is exactly one objective, rank_population/cull_population
+        # dispatch to a cheaper single-objective sort/select path (see sorting.py)
+        # instead of the full NSGA-II dominance/crowding machinery.
+        self.single_objective = len(self.objectives) == 1
+
         # Constraint objects used for evaluation
         self.constraints = kwargs.get('constraints', {})
 
@@ -206,11 +213,20 @@ class Network():
         # Applying operators to initial population
         population = self.evaluate_population(population, max_workers = max_workers)
 
-        candidates = [list(s.fitness.values()) for s in population]
-        order = crowding_distance_assignment(candidates)
+        if self.single_objective:
 
-        population = [population[o] for o in order][:population_size]
-        population = self.rank_population(population)
+            # No trade-off front to diversity-trim across - rank then truncate
+            # directly, reusing the same fast path cull_population dispatches to.
+            population = self.rank_population(population)
+            population = self.cull_population(population, population_size, rng = rng)
+
+        else:
+
+            candidates = [list(s.fitness.values()) for s in population]
+            order = crowding_distance_assignment(candidates)
+
+            population = [population[o] for o in order][:population_size]
+            population = self.rank_population(population)
 
         generations = {0: self.statistics(population)}
 
@@ -302,6 +318,9 @@ class Network():
 
     def rank_population(self, population, **kwargs):
 
+        sort = dense_rank_single_objective if self.single_objective \
+            else fast_non_dominated_sort_vectorized
+
         viable_solutions = [s for s in population if s.compliant]
         non_viable_solutions = [s for s in population if not s.compliant]
 
@@ -309,8 +328,8 @@ class Network():
 
         # Determining rank for viable solutions
         if viable_solutions:
-            
-            rank = fast_non_dominated_sort_vectorized(
+
+            rank = sort(
                 [list(s.fitness.values()) for s in viable_solutions]
                 )
 
@@ -324,7 +343,7 @@ class Network():
         # viable solutions).
         if non_viable_solutions:
 
-            rank = fast_non_dominated_sort_vectorized(
+            rank = sort(
                 [list(s.fitness.values()) for s in non_viable_solutions]
                 )
 
@@ -343,6 +362,15 @@ class Network():
         if rng is None:
 
             rng = np.random.default_rng()
+
+        if self.single_objective:
+
+            # No trade-off fronts to preserve diversity across, and ranks are
+            # typically near-unique for a continuous objective - the front-by-
+            # front loop below degrades toward O(n^2) in that case. A stable
+            # sort on rank is equivalent (same fitness distribution kept) and
+            # is O(n log n).
+            return truncate_by_rank(population, population_size, rng = rng)
 
         # Determining candidate rank
         rank = {i: s.rank for i, s in enumerate(population)}

@@ -69,6 +69,38 @@ pub fn fast_non_dominated_sort(fitness: &[Vec<f64>]) -> Vec<usize> {
 }
 
 // ---------------------------------------------------------------------------
+// dense_rank_single_objective
+//
+// Single-objective drop-in for fast_non_dominated_sort. At m = 1, Pareto
+// dominance (all_le && any_lt) collapses to a plain '<' comparison, so
+// ranking is just the dense rank of each value in sorted order (ties share
+// a rank). Produces identical rank values to fast_non_dominated_sort at
+// m = 1, in O(n log n) instead of O(n^2). Mirrors Python's
+// dense_rank_single_objective() in sorting.py.
+// ---------------------------------------------------------------------------
+
+pub fn dense_rank_single_objective(fitness: &[Vec<f64>]) -> Vec<usize> {
+    let n = fitness.len();
+    if n == 0 {
+        return Vec::new();
+    }
+
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&a, &b| fitness[a][0].total_cmp(&fitness[b][0]));
+
+    let mut ranks = vec![0usize; n];
+    let mut rank = 0usize;
+    for w in 1..n {
+        if fitness[order[w]][0] != fitness[order[w - 1]][0] {
+            rank += 1;
+        }
+        ranks[order[w]] = rank;
+    }
+
+    ranks
+}
+
+// ---------------------------------------------------------------------------
 // crowding_distance_order
 //
 // Returns indices sorted by crowding distance descending (most diverse first).
@@ -121,7 +153,13 @@ pub fn crowding_distance_order(fitness: &[Vec<f64>]) -> Vec<usize> {
 // Returns the subset that received a rank (viable + non-viable).
 // ---------------------------------------------------------------------------
 
-pub fn rank_population(population: &mut Vec<Solution>) {
+pub fn rank_population(population: &mut Vec<Solution>, single_objective: bool) {
+    let rank_fn: fn(&[Vec<f64>]) -> Vec<usize> = if single_objective {
+        dense_rank_single_objective
+    } else {
+        fast_non_dominated_sort
+    };
+
     let viable:     Vec<usize> = (0..population.len())
         .filter(|&i| population[i].feasible && population[i].compliant)
         .collect();
@@ -132,7 +170,7 @@ pub fn rank_population(population: &mut Vec<Solution>) {
     // Rank viable solutions
     if !viable.is_empty() {
         let fit: Vec<Vec<f64>> = viable.iter().map(|&i| population[i].fitness.clone()).collect();
-        let ranks = fast_non_dominated_sort(&fit);
+        let ranks = rank_fn(&fit);
         for (pos, &idx) in viable.iter().enumerate() {
             population[idx].rank = ranks[pos];
         }
@@ -143,11 +181,46 @@ pub fn rank_population(population: &mut Vec<Solution>) {
 
     if !non_viable.is_empty() {
         let fit: Vec<Vec<f64>> = non_viable.iter().map(|&i| population[i].fitness.clone()).collect();
-        let ranks = fast_non_dominated_sort(&fit);
+        let ranks = rank_fn(&fit);
         for (pos, &idx) in non_viable.iter().enumerate() {
             population[idx].rank = ranks[pos] + viable_max_rank + 1;
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// truncate_by_rank
+//
+// Single-objective drop-in for the rank/crowding-distance front-filling
+// loop in cull_population. Since ties in single-objective rank correspond
+// to identical fitness values, any tie-break among them yields the same
+// fitness distribution, so a stable sort on rank followed by truncation is
+// sufficient - no crowding distance or front-by-front bookkeeping needed.
+// Mirrors Python's truncate_by_rank() in sorting.py.
+// ---------------------------------------------------------------------------
+
+pub fn truncate_by_rank<R: Rng>(
+    pool: Vec<Solution>,
+    size: usize,
+    rng:  &mut R,
+) -> Vec<Solution> {
+    let mut ranked: Vec<usize> = (0..pool.len())
+        .filter(|&i| pool[i].rank != usize::MAX && pool[i].feasible)
+        .collect();
+
+    ranked.sort_by_key(|&i| pool[i].rank);
+
+    let mut next_gen: Vec<usize> = ranked.into_iter().take(size).collect();
+
+    let current = next_gen.len();
+    if current < size && current > 0 {
+        let extras: Vec<usize> = (0..size - current)
+            .map(|_| next_gen[rng.gen_range(0..current)])
+            .collect();
+        next_gen.extend(extras);
+    }
+
+    next_gen.into_iter().map(|i| pool[i].clone()).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -158,14 +231,24 @@ pub fn rank_population(population: &mut Vec<Solution>) {
 // ---------------------------------------------------------------------------
 
 pub fn cull_population<R: Rng>(
-    pool:         Vec<Solution>,
-    size:         usize,
-    corner_depth: usize,
-    rng:          &mut R,
+    pool:             Vec<Solution>,
+    size:             usize,
+    corner_depth:     usize,
+    single_objective: bool,
+    rng:              &mut R,
 ) -> Vec<Solution> {
     let n = pool.len();
     if n <= size {
         return pool;
+    }
+
+    if single_objective {
+        // No trade-off fronts to preserve diversity across, and ranks are
+        // typically near-unique for a continuous objective - the front-by-
+        // front loop below degrades toward O(n^2) in that case. A stable
+        // sort on rank is equivalent (same fitness distribution kept) and
+        // is O(n log n). Mirrors Python's truncate_by_rank() in sorting.py.
+        return truncate_by_rank(pool, size, rng);
     }
 
     // Collect ranks; exclude infeasible (rank = usize::MAX)
@@ -310,6 +393,8 @@ pub fn optimize<R: Rng>(
     rng:                     &mut R,
 ) -> OptimizeResult {
 
+    let single_objective = data.objectives.len() == 1;
+
     // ---- initial population ------------------------------------------------
     let mut population: Vec<Solution> = (0..initial_population_size)
         .map(|_| ga::generate_solution(data, rng))
@@ -338,7 +423,7 @@ pub fn optimize<R: Rng>(
     //     population = selected;
     // }
 
-    rank_population(&mut population);
+    rank_population(&mut population, single_objective);
 
     // ---- generation history ------------------------------------------------
     let mut generation_stats: Vec<GenerationStats> = Vec::with_capacity(max_iter + 1);
@@ -389,8 +474,8 @@ pub fn optimize<R: Rng>(
         let mut pool = population;
         pool.extend(offspring);
 
-        rank_population(&mut pool);
-        population = cull_population(pool, population_size, corner_depth, rng);
+        rank_population(&mut pool, single_objective);
+        population = cull_population(pool, population_size, corner_depth, single_objective, rng);
 
         generations_run += 1;
 

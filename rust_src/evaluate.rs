@@ -39,6 +39,11 @@ pub fn evaluate(data: &NetworkData, solution: &mut Solution) {
             ObjectiveKind::FleetPortion { included } => {
                 fleet_portion_cost(solution, included)
             }
+            ObjectiveKind::TotalCost { schedules_per_period, discount_rate, depot_capacity_pricing } => {
+                capital_cost(data, solution, *discount_rate)
+                    + operational_cost(data, solution, *schedules_per_period, *discount_rate)
+                    + depot_capacity_cost(solution, depot_capacity_pricing)
+            }
         };
         solution.fitness.push(value);
     }
@@ -239,6 +244,23 @@ fn fleet_portion_cost(solution: &Solution, included: &[usize]) -> f64 {
         .count();
 
     count as f64 / total as f64
+}
+
+// ---------------------------------------------------------------------------
+// Depot capacity pricing — stacking tiers keyed by depot vehicle count.
+// Mirrors Python's Total_Cost.depot_capacity().
+// ---------------------------------------------------------------------------
+
+fn depot_capacity_cost(solution: &Solution, pricing: &[Vec<(usize, f64)>]) -> f64 {
+    pricing.iter().enumerate()
+        .map(|(depot_idx, tiers)| {
+            let n_vehicles = solution.vehicles.get(depot_idx).map_or(0, |v| v.len());
+            tiers.iter()
+                .filter(|&&(threshold, _)| n_vehicles >= threshold)
+                .map(|&(_, price)| price)
+                .sum::<f64>()
+        })
+        .sum()
 }
 
 // ---------------------------------------------------------------------------

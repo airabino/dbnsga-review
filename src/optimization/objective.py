@@ -55,12 +55,25 @@ class Total_Cost(Objective):
         self.operational = Operational_Cost(**kwargs)
         self.capital = Capital_Cost(**kwargs)
 
+        # Optional depot capacity pricing tiers:
+        #   {depot: [(threshold, price), ...], ...}
+        # When a depot's vehicle count reaches a tier's threshold, that
+        # tier's price is added to cost. Tiers stack - a depot with 100
+        # vehicles pays for every tier whose threshold is <= 100.
+        depot_capacity_pricing = kwargs.get('depot_capacity_pricing', {})
+
+        self.depot_capacity_pricing = {
+            depot: sorted(tiers, key = lambda t: t[0])
+            for depot, tiers in depot_capacity_pricing.items()
+            }
+
     def evaluate_solution(self, network, solution):
 
         cost = 0.
 
         cost += self.capital.evaluate_solution(network, solution)
         cost += self.operational.evaluate_solution(network, solution)
+        cost += self.depot_capacity(network, solution)
 
         return cost
 
@@ -68,6 +81,27 @@ class Total_Cost(Objective):
 
         cost['capital'] = self.capital.describe(network, solution)
         cost['operational'] = self.operational.describe(network, solution)
+        cost['depot_capacity'] = self.depot_capacity(network, solution)
+
+        return cost
+
+    def depot_capacity(self, network, solution):
+        '''
+        Depot capacity penalties - stacking pricing tiers based on the
+        number of vehicles assigned to each depot.
+        '''
+
+        cost = 0.
+
+        for depot, tiers in self.depot_capacity_pricing.items():
+
+            n_vehicles = len(solution.vehicles.get(depot, []))
+
+            for threshold, price in tiers:
+
+                if n_vehicles >= threshold:
+
+                    cost += price
 
         return cost
 

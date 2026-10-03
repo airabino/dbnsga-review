@@ -222,6 +222,18 @@ pub enum ObjectiveKind {
     FleetPortion {
         included: Vec<usize>,
     },
+    /// Capital_Cost + Operational_Cost, plus optional stacking depot capacity
+    /// pricing tiers. Mirrors Python's Total_Cost.
+    ///
+    /// depot_capacity_pricing[depot_idx] is a list of (threshold, price)
+    /// tiers for that depot; a depot's vehicle count reaching a tier's
+    /// threshold adds that tier's price (tiers stack). Empty inner list
+    /// means no pricing configured for that depot.
+    TotalCost {
+        schedules_per_period: f64,
+        discount_rate: f64,
+        depot_capacity_pricing: Vec<Vec<(usize, f64)>>,
+    },
 }
 
 /// Active constraint configuration for a run.

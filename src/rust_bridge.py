@@ -28,6 +28,7 @@ _OBJECTIVE_KIND_MAP = {
     'Operational_Cost':     'Operational',
     'Emissions_Cost':        'Emissions',
     'Minimize_Fleet_Portion':'FleetPortion',
+    'Total_Cost':            'TotalCost',
 }
 
 def _objective_params(obj):
@@ -142,6 +143,8 @@ def build_rust_network(network):
     )
     depot_probabilities = depot_prob_raw / depot_prob_raw.sum()
 
+    _depot_to_idx = {name: idx for idx, name in enumerate(network.depots)}
+
     # -----------------------------------------------------------------------
     # 6. Vehicle type arrays
     # -----------------------------------------------------------------------
@@ -223,10 +226,11 @@ def build_rust_network(network):
     # -----------------------------------------------------------------------
     # 8. Objective configuration
     # -----------------------------------------------------------------------
-    objective_kinds          = []
-    objective_params_list    = []
-    objective_included_types = []
-    objective_names          = list(network.objectives.keys())
+    objective_kinds                  = []
+    objective_params_list             = []
+    objective_included_types          = []
+    objective_depot_capacity_pricing  = []
+    objective_names                   = list(network.objectives.keys())
 
     for obj in network.objectives.values():
         class_name = type(obj).__name__
@@ -244,6 +248,15 @@ def build_rust_network(network):
             if name in vt_name_to_idx
         ])
 
+        depot_capacity_pricing = getattr(obj, 'depot_capacity_pricing', {})
+        objective_depot_capacity_pricing.append([
+            [
+                (int(threshold), float(price))
+                for threshold, price in depot_capacity_pricing.get(depot, [])
+            ]
+            for depot in network.depots
+        ])
+
     # -----------------------------------------------------------------------
     # 9. Constraint configuration
     #    Extract Fleet_Portion parameters; Energy is handled implicitly
@@ -254,8 +267,6 @@ def build_rust_network(network):
     _NO_LIMIT              = 2**63 - 1  # maps to usize::MAX in Rust
     port_limits            = [_NO_LIMIT] * len(network.depots)
     lot_size_limits        = [_NO_LIMIT] * len(network.depots)
-
-    _depot_to_idx = {name: idx for idx, name in enumerate(network.depots)}
 
     for constraint in network.constraints.values():
         if hasattr(constraint, 'included') and hasattr(constraint, 'portion'):
@@ -291,7 +302,8 @@ def build_rust_network(network):
         pt_resupply_rates, pt_operating_times, pt_efficiencies,
         pt_fixed_costs, pt_unit_costs, pt_annual_costs, pt_disposal_costs,
         pt_service_periods, pt_operational_costs, pt_emissions,
-        objective_kinds, objective_params_list, objective_included_types, objective_names,
+        objective_kinds, objective_params_list, objective_included_types,
+        objective_depot_capacity_pricing, objective_names,
         fleet_portion_included, fleet_portion_min,
         port_limits, lot_size_limits,
     )

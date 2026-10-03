@@ -66,10 +66,13 @@ impl RustNetwork {
     ///   pt_service_periods (i64), pt_operational_costs
     ///
     /// Objective configuration:
-    ///   objective_kinds: list[str]  — e.g. ["InitialCost", "DailyCost", "FleetPortion"]
+    ///   objective_kinds: list[str]  — e.g. ["InitialCost", "DailyCost", "FleetPortion", "TotalCost"]
     ///   objective_params: list[dict[str, float]]  — per-objective numeric parameters
     ///   objective_included_types: list[list[int]]  — per-objective vehicle type
     ///     indices; only meaningful for "FleetPortion" (empty list otherwise)
+    ///   objective_depot_capacity_pricing: list[list[list[(int, float)]]]  — per
+    ///     objective, per depot_idx, list of (threshold, price) tiers; only
+    ///     meaningful for "TotalCost" (empty lists otherwise)
     ///
     /// Constraint configuration:
     ///   fleet_portion_included: list[int]  — vehicle type indices
@@ -121,6 +124,7 @@ impl RustNetwork {
         objective_kinds:  Vec<String>,
         objective_params: Vec<HashMap<String, f64>>,
         objective_included_types: Vec<Vec<usize>>,
+        objective_depot_capacity_pricing: Vec<Vec<Vec<(usize, f64)>>>,
         objective_names:  Vec<String>,
         fleet_portion_included: Vec<usize>,
         fleet_portion_min: f64,
@@ -247,7 +251,10 @@ impl RustNetwork {
             .iter()
             .zip(objective_params.iter())
             .zip(objective_included_types.iter())
-            .map(|((kind, params), included)| parse_objective(kind, params, included))
+            .zip(objective_depot_capacity_pricing.iter())
+            .map(|(((kind, params), included), depot_capacity_pricing)| {
+                parse_objective(kind, params, included, depot_capacity_pricing)
+            })
             .collect::<PyResult<Vec<_>>>()?;
 
         if objectives.is_empty() {
@@ -556,6 +563,7 @@ fn parse_objective(
     kind: &str,
     params: &HashMap<String, f64>,
     included: &[usize],
+    depot_capacity_pricing: &[Vec<(usize, f64)>],
 ) -> PyResult<ObjectiveKind> {
     match kind {
         "InitialCost" => Ok(ObjectiveKind::InitialCost),
@@ -573,9 +581,14 @@ fn parse_objective(
         "FleetPortion" => Ok(ObjectiveKind::FleetPortion {
             included: included.to_vec(),
         }),
+        "TotalCost" => Ok(ObjectiveKind::TotalCost {
+            schedules_per_period: params.get("schedules_per_period").copied().unwrap_or(1.0),
+            discount_rate:        params.get("discount_rate").copied().unwrap_or(0.0),
+            depot_capacity_pricing: depot_capacity_pricing.to_vec(),
+        }),
         other => Err(pyo3::exceptions::PyValueError::new_err(format!(
             "Unknown objective kind '{}'. Valid kinds: \
-             InitialCost, DailyCost, Capital, Operational, Emissions, FleetPortion",
+             InitialCost, DailyCost, Capital, Operational, Emissions, FleetPortion, TotalCost",
             other
         ))),
     }

@@ -423,21 +423,6 @@ class Solution():
         # Recovering the tours
         tours = self._tours()
 
-        # a = np.unique(list(self.successors.keys()))
-        # b = np.unique([t for tour in tours for t in tour['trips']])
-
-        # c = np.setdiff1d(a, b)
-
-        # print('a', sum([v is None for v in self.successors.values()]))
-
-        # predecessors = defaultdict(list)
-
-        # for k, v in self.successors.items():
-
-        #     predecessors[v].append(k)
-
-        # print([(ci, self.successors[ci]) for ci in c])
-
         tours = self._voting(tours)
 
         tours = self._tour_information(network, tours)

@@ -1,8 +1,9 @@
 [
     {
         "type": "SRBEV",
-        "supply_types": ["AC-PLUG", "DC-PLUG"],
+        "supply_types": ["AC-PLUG", "DC-PLUG", "DC-PANTO"],
         "capacity": 1584000000.0,
+        "energy_capacity": 1584000000.0,
         "resupply_rate": 450000.0,
         "consumption": 4519.577377252952,
         "emissions": 6.267129466666666e-05,
@@ -16,8 +17,9 @@
     },
     {
         "type": "MRBEV",
-        "supply_types": ["AC-PLUG", "DC-PLUG"],
+        "supply_types": ["AC-PLUG", "DC-PLUG", "DC-PANTO"],
         "capacity": 1980000000.0,
+        "energy_capacity": 1980000000.0,
         "resupply_rate": 450000.0,
         "consumption": 4519.577377252952,
         "emissions": 6.267129466666666e-05,
@@ -31,8 +33,9 @@
     },
     {
         "type": "LRBEV",
-        "supply_types": ["AC-PLUG", "DC-PLUG"],
+        "supply_types": ["AC-PLUG", "DC-PLUG", "DC-PANTO"],
         "capacity": 2376000000.0,
+        "energy_capacity": 2376000000.0,
         "resupply_rate": 450000.0,
         "consumption": 4519.577377252952,
         "emissions": 6.267129466666666e-05,
@@ -48,6 +51,7 @@
         "type": "FCEV",
         "supply_types": ["LH2-PUMP"],
         "capacity": 4599000000.0,
+        "energy_capacity": 4599000000.0,
         "resupply_rate": 10950000.0,
         "consumption": 10119.656855836476,
         "emissions": 8.953042095238095e-05,
@@ -62,6 +66,7 @@
         "type": "ICEV",
         "supply_types": ["DIESEL-PUMP"],
         "capacity": 18648000000.0,
+        "energy_capacity": 18648000000.0,
         "resupply_rate": 88799999.99999999,
         "consumption": 8013.6,
         "emissions": 7.642642642642643e-05,

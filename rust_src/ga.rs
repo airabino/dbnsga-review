@@ -207,7 +207,7 @@ pub fn mate_mutate<R: Rng>(
     let rn_mutation: Vec<f64> = (0..n).map(|_| rng.gen::<f64>()).collect();
 
     for i in 0..n {
-        if rn_mutation[i] <= mutation_probability {
+        if rn_mutation[i] <= mutation_probability / (i as f64 + 1.){
             let candidates = &data.trip_adj[i];
             if candidates.is_empty() {
                 continue;

@@ -58,19 +58,19 @@ def generations_plot(ax, generations, xkey, ykey, **kwargs):
         labels.append(f'Initial Population')
 
         anc = ax.scatter(
-            x[non_compliant_indices] / 1e6, y[non_compliant_indices] / 1e3,
+            x[non_compliant_indices] / 1e6, y[non_compliant_indices],
             ec = 'none', lw = .1,
             fc = color, zorder = zorder, marker = 'X',
         )
 
         ac = ax.scatter(
-            x[compliant_indices] / 1e6, y[compliant_indices] / 1e3,
+            x[compliant_indices] / 1e6, y[compliant_indices],
             ec = 'none', lw = .1,
             fc = color, zorder = zorder + 1,
         )
 
         ap = ax.scatter(
-            x[pareto_indices] / 1e6, y[pareto_indices] / 1e3,
+            x[pareto_indices] / 1e6, y[pareto_indices],
             ec = 'none', lw = .1,
             fc = color, zorder = zorder + 2, marker = 's'
         )
@@ -117,19 +117,19 @@ def generations_plot(ax, generations, xkey, ykey, **kwargs):
         labels.append(f'Generation {idx}')
 
         anc = ax.scatter(
-            x[non_compliant_indices] / 1e6, y[non_compliant_indices] / 1e3,
+            x[non_compliant_indices] / 1e6, y[non_compliant_indices],
             ec = 'k', lw = .5,
             fc = color, zorder = zorder, marker = 'X'
         )
 
         ac = ax.scatter(
-            x[compliant_indices] / 1e6, y[compliant_indices] / 1e3,
+            x[compliant_indices] / 1e6, y[compliant_indices],
             ec = 'k', lw = .5,
             fc = color, zorder = zorder + 1,
         )
 
         ap = ax.scatter(
-            x[pareto_indices] / 1e6, y[pareto_indices] / 1e3,
+            x[pareto_indices] / 1e6, y[pareto_indices],
             ec = 'k', lw = .5,
             fc = color, zorder = zorder + 2, marker = 's'
         )
@@ -475,6 +475,8 @@ def vehicles_scatter_pie_int(ax, population, **kwargs):
     xp = np.interp(d, dist, x)
     yp = np.interp(d, dist, y)
 
+    po = np.array(list(p.values())).T
+
     p = {k: np.interp(xp, x, v) for k, v in p.items()}
 
     pl = np.array(list(p.values())).T
@@ -515,8 +517,8 @@ def vehicles_scatter_pie_int(ax, population, **kwargs):
 
     _ = ax.text(
         xmean, ymean,
-        fr"Largest: $\bf{{{int(pl.sum(axis = 1).max())}}}$ vehicles" + '\n'
-        fr'Smallest: $\bf{{{int(pl.sum(axis = 1).min())}}}$ vehicles',
+        fr"Largest: $\bf{{{int(po.sum(axis = 1).max())}}}$ vehicles" + '\n'
+        fr'Smallest: $\bf{{{int(po.sum(axis = 1).min())}}}$ vehicles',
         **kw
         )
     
@@ -562,9 +564,14 @@ def ports_scatter_pie_int(ax, population, **kwargs):
     xp = np.interp(d, dist, x)
     yp = np.interp(d, dist, y)
 
+    # print(p)
+
+    po = np.array(list(p.values())).T
+
     p = {k: np.interp(xp, x, v) for k, v in p.items()}
 
     pl = np.array(list(p.values())).T
+    # print(v, p, pl)
 
 
     s = np.array(
@@ -601,8 +608,8 @@ def ports_scatter_pie_int(ax, population, **kwargs):
 
     _ = ax.text(
         xmean, ymean,
-        fr"Largest: $\bf{{{int(pl.sum(axis = 1).max())}}}$ ports" + '\n'
-        fr'Smallest: $\bf{{{int(pl.sum(axis = 1).min())}}}$ ports',
+        fr"Largest: $\bf{{{int(po.sum(axis = 1).max())}}}$ ports" + '\n'
+        fr'Smallest: $\bf{{{int(po.sum(axis = 1).min())}}}$ ports',
         **kw
         )
     

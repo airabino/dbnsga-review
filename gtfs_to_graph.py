@@ -362,7 +362,7 @@ def main(**kwargs):
 
         print('Loading Trips graph')
 
-        trips = src.graph.graph_from_json(f'{directory}/trips.json')
+        trips = src.g raph.graph_from_json(f'{directory}/trips.json')
 
     else:
 
@@ -400,6 +400,7 @@ def main(**kwargs):
                     target['start'] >= source['finish'] + transit
                 )
                 finish_feasible = target['start'] <= source['finish'] + buffer
+                # finish_feasible = True
 
                 if start_feasible and finish_feasible:
 

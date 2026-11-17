@@ -1,0 +1,6 @@
+matplotlib==3.11.0
+more_itertools==11.1.0
+networkx==3.6.1
+numpy==2.5.1
+pandas==3.0.3
+scipy==1.18.0

@@ -103,11 +103,11 @@ def population_to_dict(population):
         data = {
             'rank': deepcopy(solution.rank),
             'age': deepcopy(solution.age),
-            'compliant': deepcopy(solution.compliant),
+            'penalty': deepcopy(solution.penalty),
             'fitness': deepcopy(solution.fitness),
             'successors': deepcopy(solution.successors),
             'depot': deepcopy(solution.depot),
-            'equipment': deepcopy(solution.equipment),
+            'vehicle_type': deepcopy(solution.vehicle_type),
             'supply_type': deepcopy(solution.supply_type),
             'tours': deepcopy(solution.tours),
             'supply_events': deepcopy(solution.supply_events),
@@ -323,11 +323,14 @@ class Network():
             offspring = self.cross_population(
                 population, crossover_probability=crossover_probability, rng=rng
                 )
-            offspring = self.mutate_population(
-                population, mutation_probability=mutation_probability, rng=rng
-                )
 
-            offspring = self.evaluate_population(offspring,)
+            if mutation_probability > 0:
+
+                offspring = self.mutate_population(
+                    offspring, mutation_probability=mutation_probability, rng=rng
+                    )
+
+            offspring = self.evaluate_population(offspring)
             next_population = population + offspring
             next_population = self.rank_population(next_population)
             population = self.cull_population(next_population, population_size)

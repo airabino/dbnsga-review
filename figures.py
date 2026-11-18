@@ -209,7 +209,7 @@ def vehicles_scatter_pie(ax, population, **kwargs):
         'colors': cmap.colors(np.linspace(0, 1, len(p))),
     }
 
-    _ = src.plot.plot_scatter_pie(ax, x / 1e6, y / 1e3, pl, s, **kw)
+    _ = src.plot.plot_scatter_pie(ax, x / 1e6, y, pl, s, **kw)
     
     return ax
 
@@ -266,7 +266,7 @@ def ports_scatter_pie(ax, population, **kwargs):
         'colors': cmap.colors(np.linspace(0, 1, len(p))),
     }
 
-    _ = src.plot.plot_scatter_pie(ax, x / 1e6, y / 1e3, pl, s, **kw)
+    _ = src.plot.plot_scatter_pie(ax, x / 1e6, y, pl, s, **kw)
     
     return ax
 

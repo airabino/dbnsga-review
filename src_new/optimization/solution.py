@@ -26,7 +26,7 @@ def pick_one_from_each(data, rng):
 
     return [d[indices[i]] for i, d in enumerate(data)]
 
-def pick_one_from_each_weighted(data, rng):
+def pick_one_from_each_weighted(data, rng, shuffle=False):
     '''
     Picks a single element from a list of lists of non-homogenous lengths based on
     weights. Each element of data is a list of tuples of the form (item, weight).
@@ -41,6 +41,14 @@ def pick_one_from_each_weighted(data, rng):
     lengths = np.fromiter(map(len, data), dtype=np.int64, count=len(data))
     items, weights = zip(*(t for lst in data for t in lst))
     w = np.asarray(weights, dtype=np.float64)
+
+    # print(w)
+
+    if shuffle:
+
+        w *= rng.uniform(0, 1, size=w.shape[0])
+
+    # print(w)
 
     # Cumulative sum of weights for each tuple in each list
     cw = np.cumsum(w)
@@ -290,8 +298,6 @@ class Solution():
         
         selected_vehicle_type = pick_one_from_each_weighted(network.trip_vehicle_types, rng)
 
-        # print(np.array(selected_vehicle_type))
-
         # Mutating supply type
         supply_type_choices = [
             [(s, network.supply_type_probabilities[s]) \
@@ -299,11 +305,7 @@ class Solution():
             for v in selected_vehicle_type
             ]
 
-        # print(supply_type_choices)
-
-        selected_supply_type = pick_one_from_each(supply_type_choices, rng)
-
-        print(selected_supply_type)
+        selected_supply_type = pick_one_from_each_weighted(supply_type_choices, rng)
 
         rn = rng.uniform(0, 1, size = len(self.vehicle_type))
 
@@ -353,27 +355,21 @@ class Solution():
 
             rng = np.random.default_rng()
 
-        selected = pick_one_from_each_weighted(network.trip_vehicle_types, rng)
+        self.vehicle_type_probabilities = (
+            {k: rng.uniform(0, 1) for k, v in network.vehicle_types.items()}
+            )
+        self.trip_vehicle_types = [
+             [(k, self.vehicle_type_probabilities[k]) \
+             for k in t.get('vehicle_types', network.vehicle_type_names)] \
+             for _, t in network.trips.nodes(data=True)
+            ]
+
+        selected = pick_one_from_each_weighted(self.trip_vehicle_types, rng, shuffle=False)
 
         vehicle_type = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
         return vehicle_type
-
-    def _generate_depot(self, network, rng = None):
-
-        if rng is None:
-
-            rng = np.random.default_rng()
-
-        p = np.array(list(network.depot_probabilities.values()))
-        p /= p.sum()
-
-        selected = rng.choice(network.depots, size = len(network.trips.nodes), p=p)
-
-        depot = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
-
-        return depot
-
+    
     def _generate_supply_type(self, network, rng = None):
         '''
         For each peice of vehicle_type, pick one of the available supply types
@@ -383,11 +379,39 @@ class Solution():
 
             rng = np.random.default_rng()
 
-        selected = pick_one_from_each_weighted(network.trip_supply_types, rng)
+        self.supply_type_probabilities = (
+            {k: rng.uniform(0, 1) for k, v in network.supply_types.items()}
+            )
+        self.trip_supply_types = [
+             list(dict.fromkeys([(s, self.supply_type_probabilities[s]) \
+             for k in t.get('vehicle_types', network.vehicle_type_names) \
+             for s in network.vehicle_types[k].supply_types])) \
+             for _, t in network.trips.nodes(data=True)
+            ]
+
+        selected = pick_one_from_each_weighted(self.trip_supply_types, rng, shuffle=False)
 
         supply_type = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
         return supply_type
+
+    def _generate_depot(self, network, rng = None):
+
+        if rng is None:
+
+            rng = np.random.default_rng()
+
+        p = (
+            np.array(list(network.depot_probabilities.values())) *
+            rng.uniform(0, 1, len(network.depots))
+            )
+        p /= p.sum()
+
+        selected = rng.choice(network.depots, size = len(network.trips.nodes), p=p)
+
+        depot = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
+
+        return depot
 
     def _tours(self, **kwargs):
 

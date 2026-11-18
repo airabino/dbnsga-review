@@ -13,7 +13,7 @@
         "disposal_cost": 0,
         "service_periods": 12,
         "operational_cost": 0.005555555555555556,
-        "probability": 0.33
+        "probability": 1
     },
     {
         "type": "MRBEV-DD",
@@ -29,7 +29,7 @@
         "disposal_cost": 0,
         "service_periods": 12,
         "operational_cost": 0.005555555555555556,
-        "probability": 0.33
+        "probability": 1
     },
     {
         "type": "ICEV",
@@ -44,7 +44,8 @@
         "annual_cost": 20800,
         "disposal_cost": 0,
         "service_periods": 12,
-        "operational_cost": 0.005555555555555556
+        "operational_cost": 0.005555555555555556,
+        "probability": 1
     },
     {
         "type": "ICEV-DD",
@@ -59,6 +60,7 @@
         "annual_cost": 20800,
         "disposal_cost": 0,
         "service_periods": 12,
-        "operational_cost": 0.005555555555555556
+        "operational_cost": 0.005555555555555556,
+        "probability": 1
     }
 ]

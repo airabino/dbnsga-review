@@ -40,15 +40,15 @@ def generations_plot(ax, generations, xkey, ykey, **kwargs):
 
     compliant_indices = [
         i for i, s in enumerate(gen.values()) \
-        if s['compliant'] and (1 <= s['rank'] <= rank) \
+        if (s['penalty'] == 0) and (1 <= s['rank'] <= rank) \
         ]
     pareto_indices = [
         i for i, s in enumerate(gen.values()) \
-        if s['compliant'] and (s['rank'] == 0) \
+        if (s['penalty'] == 0) and (s['rank'] == 0) \
         ]
     non_compliant_indices = [
         i for i, s in enumerate(gen.values()) \
-        if not s['compliant'] and (s['rank'] <= rank) \
+        if (s['penalty'] > 0) and (s['rank'] <= rank) \
         ]
 
     color = '#cccccc'
@@ -101,15 +101,15 @@ def generations_plot(ax, generations, xkey, ykey, **kwargs):
 
         compliant_indices = [
             i for i, s in enumerate(gen.values()) \
-            if s['compliant'] and (1 <= s['rank'] <= rank) \
+            if (s['penalty'] == 0) and (1 <= s['rank'] <= rank) \
             ]
         pareto_indices = [
             i for i, s in enumerate(gen.values()) \
-            if s['compliant'] and (s['rank'] == 0) \
+            if (s['penalty'] == 0) and (s['rank'] == 0) \
             ]
         non_compliant_indices = [
             i for i, s in enumerate(gen.values()) \
-            if not s['compliant'] and (s['rank'] <= rank) \
+            if (s['penalty'] > 0) and (s['rank'] <= rank) \
             ]
 
         color = cmap(idx) if cont else cmap(jdx)

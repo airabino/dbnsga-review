@@ -5,10 +5,15 @@ import json
 import numpy as np
 import networkx as nx
 
-from heapq import heappush, heappop
-from itertools import count, batched, permutations
-
-from copy import copy, deepcopy
+from heapq import heappush
+from heapq import heappop
+from itertools import count
+from itertools import batched
+from itertools import permutations
+from copy import copy
+from copy import deepcopy
+from tqdm import tqdm
+from shutil import get_terminal_size
 
 from .solution import Solution
 from .sorting import fast_non_dominated_sort
@@ -17,8 +22,12 @@ from .sorting import crowding_distance_assignment
 from .sorting import dense_rank_single_objective
 from .sorting import truncate_by_rank
 
-from ..progress_bar import ProgressBar
 from ..graph import cypher
+
+TQDM_KWARGS = {
+    'file': sys.stdout,
+    'ncols': get_terminal_size()[0],
+}
 
 class NpEncoder(json.JSONEncoder):
     '''
@@ -58,6 +67,29 @@ def _time(func):
         return out
 
     return inner
+
+class _tqdm(tqdm):
+
+    def __init__(self, *args, **kwargs):
+
+        self.color = '\033[1m\033[38;5;34m\033[48;5;0m'
+        self.reset = '\r\033[0m\r'
+        self.format = "{l_bar}{bar}{r_bar}"
+        self.disable = kwargs.get('disable', False)
+
+        kwargs["bar_format"] = f"{self.color}{self.format}{self.reset}"
+
+        super().__init__(*args, **kwargs)
+
+    def close(self):
+
+        if self.disable:
+            return
+            
+        super().close()
+
+        self.fp.write(self.reset)
+        self.fp.flush()
 
 def population_to_dict(population):
     '''
@@ -99,9 +131,36 @@ class Network():
 
         # A set of Vehicle objects
         self.vehicle_types = kwargs.get('vehicle_types', {})
+        self.vehicle_type_names = list(self.vehicle_types.keys())
+        self.vehicle_type_probabilities = (
+            {k: v.probability for k, v in self.vehicle_types.items()}
+            )
+        self.trip_vehicle_types = [
+             [(k, self.vehicle_type_probabilities[k]) \
+             for k in t.get('vehicle_types', self.vehicle_type_names)] \
+             for _, t in self.trips.nodes(data=True)
+            ]
 
         # A set of Station objects
-        self.port_types = kwargs.get('port_types', {})
+        self.supply_types = kwargs.get('supply_types', {})
+        self.supply_type_names = list(self.supply_types.keys())
+        self.supply_type_probabilities = (
+            {k: v.probability for k, v in self.supply_types.items()}
+            )
+        self.trip_supply_types = [
+             list(dict.fromkeys([(s, self.supply_type_probabilities[s]) \
+             for k in t.get('vehicle_types', self.vehicle_type_names) \
+             for s in self.vehicle_types[k].supply_types])) \
+             for _, t in self.trips.nodes(data=True)
+            ]
+
+        # Depots of the network
+        self.depots = (
+            [k for k, v in self.locations._node.items() if v['type'] == 'depot']
+            )
+        self.depot_probabilities = (
+            {k: self.locations._node[k].get('probability', 1.) for k in self.depots}
+            )
 
         # Objective objects used for evaluation
         self.objectives = kwargs.get('objectives', {})
@@ -121,9 +180,8 @@ class Network():
         # Constraint objects used for evaluation
         self.constraints = kwargs.get('constraints', {})
 
-        self.depots = (
-            [k for k, v in self.locations._node.items() if v['type'] == 'depot']
-            )
+        # When True, voting results are written to chromosome
+        self.lamarckian = kwargs.get('lamarckian', False)
 
     def statistics(self, population):
 
@@ -151,7 +209,55 @@ class Network():
 
             json.dump(data, file, indent = 4, cls = NpEncoder)
 
-    def optimize(self, rng = None, initial_population = None, **kwargs):
+    def cold_start(self, population_size=0, rng=None, disable_pb=False):
+        '''
+        Generate an initial population
+        '''
+
+        # Seeded random number generator
+        if rng is None:
+
+            rng = np.random.default_rng()
+
+        population = []
+
+        print('Generating Initial Population\n')
+        
+        for i in _tqdm(range(population_size), disable=disable_pb, **TQDM_KWARGS):
+
+            population.append(Solution(self).generate(self, rng))
+
+        return population
+
+    def hot_start(self, data=[], disable_pb=False):
+        '''
+        Reconstruct an initial population from data. Data must be a list of
+        dictionaries containing the following fields:
+        - successors
+        - vehicle_type
+        - port_type
+        - depot
+        '''
+
+        population = []
+
+        print('Recovering Initial Population\n')
+
+        for solution in _tqdm(data, disable=disable_pb, **TQDM_KWARGS):
+
+            population.append(
+                Solution(
+                    self,
+                    successors=deepcopy(solution.successors),
+                    vehicle_type=deepcopy(solution.vehicle_type),
+                    supply_type=deepcopy(solution.supply_type),
+                    depot=deepcopy(solution.depot),
+                    )
+                )
+
+        return population
+
+    def optimize(self, population=[], rng=None, **kwargs):
 
         # Seeded random number generation
         if rng is None:
@@ -161,58 +267,21 @@ class Network():
         # optimization hyper-parameters
         max_iter = kwargs.get('max_iter', 100)
         min_iter = kwargs.get('min_iter', 0)
-        initial_population_size = kwargs.get('initial_population_size', 300)
         population_size = kwargs.get('population_size', 100)
-        max_workers = kwargs.get('max_workers', 1)
         crossover_probability = kwargs.get('crossover_probability', 0.5)
         mutation_probability = kwargs.get('mutation_probability', 0)
         survival_threshold = kwargs.get('survival_threshold', 0)
-        corner_depth = kwargs.get('corner_depth', 0)
         retries = kwargs.get('retries', 0)
-
-        parallel = max_workers > 1
 
         # Settings
         store = kwargs.get('store', True)
         store_interval = kwargs.get('store_interval', 1)
 
         # Arguments for ProgressBar
-        progress_bar_kw = kwargs.get('progress_bar_kw', {})
-
-        # Initial population
-        if initial_population is None:
-            #Randomly generate initial population
-
-            population = self.initial_population(
-                population_size = initial_population_size,
-                rng = rng,
-                max_workers = max_workers,
-                progress_bar_kw=progress_bar_kw
-            )
-
-        else:
-            # Clone initial population
-
-            population_size = len(initial_population)
-
-            # Evaluation of initial population is done to reset some effects
-            # of vehicle assignment
-            initial_population = self.evaluate_population(initial_population)
-
-            population = []
-
-            for solution in initial_population:
-
-                population.append(
-                    Solution(
-                        self,
-                        successors = deepcopy(solution.successors),
-                        equipment = deepcopy(solution.equipment),
-                        )
-                    )
+        disable_pb = kwargs.get('disable_pb', False)
 
         # Applying operators to initial population
-        population = self.evaluate_population(population, max_workers = max_workers)
+        population = self.evaluate_population(population)
 
         if self.single_objective:
 
@@ -240,7 +309,7 @@ class Network():
         seeds = rng.integers(0, 1000000000000, size = (max_iter))
 
         # Running NSGA
-        for idx in ProgressBar(range(max_iter), **progress_bar_kw):
+        for idx in _tqdm(range(max_iter), disable=disable_pb, **TQDM_KWARGS):
 
             t0 = time.time()
 
@@ -251,31 +320,22 @@ class Network():
                 solution.age += 1
 
             # Build the next population
-            offspring = self.crossover_mutation(
-                population,
-                crossover_probability = crossover_probability,
-                mutation_probability = mutation_probability,
-                rng = rng
+            offspring = self.cross_population(
+                population, crossover_probability=crossover_probability, rng=rng
+                )
+            offspring = self.mutate_population(
+                population, mutation_probability=mutation_probability, rng=rng
                 )
 
-            offspring = self.evaluate_population(offspring, max_workers = max_workers)
+            offspring = self.evaluate_population(offspring,)
             next_population = population + offspring
             next_population = self.rank_population(next_population)
-            population = self.cull_population(
-                next_population, population_size, corner_depth = corner_depth
-                )
+            population = self.cull_population(next_population, population_size)
 
             if store:
                 if (idx + 1) % store_interval == 0:
 
                     generations[idx + 1] = self.statistics(population)
-
-            # print(
-            #     time.time() - t0,
-            #     np.mean([len(s.tours) for s in population]),
-            #     np.mean([len(np.unique([t for tour in s.tours for t in tour['trips']])) for s in population]),
-            #     np.mean([sum([len(t['trips']) for t in s.tours]) for s in population])
-            #     )
 
             remaining_offspring = len([p for p in population if p.age == 0])
 
@@ -291,29 +351,12 @@ class Network():
 
         return population, generations
 
-    def initial_population(self, population_size = 100, rng = None, **kwargs):
-
-        print('Generating Initial Population\n')
-
-        if rng is None:
-
-            rng = np.random.default_rng()
-
-        population = []
-        
-        for i in ProgressBar(range(population_size), disp=False):
-
-            population.append(Solution(self, **kwargs).generate(self, rng))
-
-        return population
-
     def evaluate_population(self, population, **kwargs):
-
-        max_workers = kwargs.get('max_workers', 10)
 
         for solution in population:
 
-            solution.solve_and_evaluate(self)
+            solution.solve(self)
+            solution.evaluate(self)
 
         return population
 
@@ -322,43 +365,24 @@ class Network():
         sort = dense_rank_single_objective if self.single_objective \
             else fast_non_dominated_sort_vectorized
 
-        viable_solutions = [s for s in population if s.compliant]
-        non_viable_solutions = [s for s in population if not s.compliant]
+        unique_penalties = np.unique([s.penalty for s in population])
 
-        min_non_viable_rank = 1
+        min_rank = 0
 
-        # Determining rank for viable solutions
-        if viable_solutions:
+        for penalty in unique_penalties:
 
-            rank = sort(
-                [list(s.fitness.values()) for s in viable_solutions]
-                )
+            solutions = [s for s in population if s.penalty == penalty]
+            rank = sort([list(s.fitness.values()) for s in solutions])
 
-            min_non_viable_rank = max(list(rank.values())) + 1
+            for idx, solution in enumerate(solutions):
 
-            for idx, solution in enumerate(viable_solutions):
+                solution.rank = rank[idx] + min_rank
 
-                solution.rank = rank[idx]
-
-        # Determining rank for non-viable solutions (strictly higher than all
-        # viable solutions).
-        if non_viable_solutions:
-
-            rank = sort(
-                [list(s.fitness.values()) for s in non_viable_solutions]
-                )
-
-            for idx, solution in enumerate(non_viable_solutions):
-
-                solution.rank = rank[idx] + min_non_viable_rank
-
-        population = viable_solutions + non_viable_solutions
+            min_rank = max(list(rank.values())) + 1
 
         return population
 
     def cull_population(self, population, population_size, rng = None, **kwargs):
-
-        corner_depth = kwargs.get('corner_depth', 0)
 
         if rng is None:
 
@@ -378,21 +402,6 @@ class Network():
 
         candidates = [list(s.fitness.values()) for s in population]
         order = crowding_distance_assignment(candidates)
-
-        # Keeping coner points
-        if corner_depth > 0:
-
-            candidates_array = np.array(candidates)
-            indices = np.argsort(candidates_array, axis = 0)
-
-            min_indices = indices[:corner_depth].flatten()
-            max_indices = indices[-corner_depth:].flatten()
-
-            corner_points = list(set([*min_indices, *max_indices]))
-
-            for corner_point in corner_points:
-
-                rank[corner_point] = 0
 
         # Building the mating pool
         fronts = np.unique(list(rank.values()))
@@ -425,7 +434,6 @@ class Network():
             else:
 
                 order_in_front = [o for o in order if o in indices_in_front][:remaining]
-
                 next_generation.extend([population[i] for i in order_in_front])
 
             current_next_generation_size = len(next_generation)
@@ -433,52 +441,53 @@ class Network():
         if current_next_generation_size < population_size:
 
             remaining = population_size - current_next_generation_size
-
             next_generation.extend(
                 [deepcopy(s) for s in rng.choice(next_generation, size = remaining)]
                 )
 
         return next_generation
 
-    def crossover_mutation(self, mating_pool, **kwargs):
-
-        crossover_probability = kwargs.get('crossover_probability', 0.5)
-        mutation_probability = kwargs.get('mutation_probability', 0.)
-        rng = kwargs.get('rng', None)
+    def cross_population(self, population, crossover_probability=0.5, rng=None, **kwargs):
 
         # Seeded random number generation
         if rng is None:
 
             rng = np.random.default_rng()
 
-        # rng = np.random.default_rng(134)
         # Shuffling the mating pool
         indices = rng.choice(
-            list(range(0, len(mating_pool))), size = len(mating_pool), replace = False
+            list(range(0, len(population))), size = len(population), replace = False
             )
-        mating_pool = [mating_pool[i] for i in indices]
+        population = [population[i] for i in indices]
 
         # Building offspring
         offspring = []
 
-        for parent_1, parent_2 in batched(mating_pool, 2):
+        for parent_1, parent_2 in batched(population, 2):
 
             offspring.append(
-                parent_1.mate_mutate(
-                    self, parent_2,
-                    crossover_probability = crossover_probability,
-                    mutation_probability = mutation_probability,
-                    rng = rng
+                parent_1.cross(
+                    self, parent_2, crossover_probability=crossover_probability, rng=rng
                     )
                 )
 
             offspring.append(
-                parent_2.mate_mutate(
-                    self, parent_1,
-                    crossover_probability = crossover_probability,
-                    mutation_probability = mutation_probability,
-                    rng = rng
+                parent_2.cross(
+                    self, parent_1, crossover_probability=crossover_probability, rng=rng
                     )
                 )
 
         return offspring
+
+    def mutate_population(self, population, mutation_probability=0., rng=None):
+
+        # Seeded random number generation
+        if rng is None:
+
+            rng = np.random.default_rng()
+
+        for solution in population:
+
+            solution.mutate(self, mutation_probability=mutation_probability)
+
+        return population

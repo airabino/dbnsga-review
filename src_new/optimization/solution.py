@@ -4,11 +4,14 @@ import time
 import numpy as np
 import networkx as nx
 
-from itertools import count, pairwise
-from collections import defaultdict, Counter
-from heapq import heappush, heappop
-from copy import copy, deepcopy
-from scipy.stats import mode
+from itertools import count
+from itertools import pairwise
+from collections import defaultdict
+from collections import Counter
+from heapq import heappush
+from heapq import heappop
+from copy import copy
+from copy import deepcopy
 
 def pick_one_from_each(data, rng):
 
@@ -62,53 +65,77 @@ class Solution():
 
     def __init__(self, network, **kwargs):
 
+        # Data required to recover a solution
+        self.successors = kwargs.get('successors', None)
+        self.vehicle_type = kwargs.get('vehicle_type', None)
+        self.supply_type = kwargs.get('supply_type', None)
+        self.depot = kwargs.get('depot', None)
+        
+        # Tracking instances for logging
         self.iidx = self.idx
-        self.increment()
+        self._increment()
 
-        self.compliant = True # Are all constraints met?
-
+        # Initiating attributes with empty values
         self.vehicles = defaultdict(list)
         self.ports = defaultdict(list)
-
-        self.successors = kwargs.get('successors', None)
-        self.equipment = kwargs.get('equipment', None)
-        self.depot = kwargs.get('depot', None)
-        self.supply_type = kwargs.get('supply_type', None)
-
         self.fitness = {}
-
+        self.penalty = 0
         self.rank = None
-
         self.age = 0
 
-        self.depots = (
-            [k for k, v in network.locations._node.items() if v['type'] == 'depot']
-            )
+    def generate(self, network, rng = None):
 
-        self.depot_probabilities = np.array(
-            [network.locations[d].get('probability', 1.) for d in self.depots]
-            )
-        self.depot_probabilities /= self.depot_probabilities.sum()
+        if rng is None:
 
-        self.vehicle_types = list(network.vehicle_types.keys())
+            rng = np.random.default_rng()
 
-        self.vehicle_type_probabilities = np.array(
-            [getattr(v, 'probability', 1.) for v in network.vehicle_types.values()]
-            )
-        self.vehicle_type_probabilities /= self.vehicle_type_probabilities.sum()
+        self.successors = self._generate_successors(network, rng = rng)
+        self.vehicle_type = self._generate_vehicle_type(network, rng = rng)
+        self.supply_type = self._generate_supply_type(network, rng = rng)
+        self.depot = self._generate_depot(network, rng = rng)
 
-    @classmethod
-    def increment(self):
+        return self
+    
+    def solve(self, network):
 
-        self.idx += 1
+        self.vehicles.clear()
+        self.ports.clear()
+        self.tours = None
+        self.supply_events = None
 
+        # Recovering tours
+        tours = self._tours()
+        tours = self._voting(network, tours)
+        tours = self._vehicle_assignment(network, tours)
+
+        # Recovering supply events
+        supply_events = self._supply_events(tours)
+        supply_events = self._port_assignment(network, supply_events)
+
+        self.tours = tours
+        self.supply_events = supply_events
+
+    def evaluate(self, network):
+
+        for k, objective in network.objectives.items():
+
+            self.fitness[k] = objective.evaluate_solution(network, self)
+
+        self.penalty = 0
+
+        for k, constraint in network.constraints.items():
+
+            self.penalty += constraint.evaluate(network, self)
+
+        # print(len(self.tours))
+    
     def statistics(self):
 
         output = {
             'rank': deepcopy(self.rank),
             'age': deepcopy(self.age),
             'fitness': deepcopy(self.fitness),
-            'compliant': deepcopy(self.compliant),
+            'penalty': deepcopy(self.penalty),
         }
 
         return output
@@ -117,37 +144,14 @@ class Solution():
 
         output = {
             'successors': deepcopy(self.successors),
-            'equipment': deepcopy(self.equipment),
+            'vehicle_type': deepcopy(self.vehicle_type),
             'depot': deepcopy(self.depot),
             'supply_type': deepcopy(self.supply_type),
         }
 
         return output
 
-    def from_data(self, network, data):
-
-        self.successors = data['successors']
-        self.equipment = data['equipment']
-        self.depot = data['depot']
-        self.supply_type = data['supply_type']
-
-        self.solve(network)
-        self.evaluate(network)
-
-        return self
-
-    def mate_mutate(self, network, partner, **kwargs):
-
-        child = self.mate(network, partner, **kwargs)
-        child.mutate(network, **kwargs)
-
-        return child
-
-    def mate(self, network, partner, **kwargs):
-
-        # Inputs
-        crossover_probability = kwargs.get('crossover_probability', 0.5)
-        rng = kwargs.get('rng', None)
+    def cross(self, network, partner, crossover_probability=0.5, rng=None):
 
         if rng is None:
 
@@ -203,36 +207,30 @@ class Solution():
 
                 successors[source] = 'depot'
 
-        # Copying equipment for child
+        # Copying vehicle_type for child
         depot = {k: v for k, v in self.depot.items()}
-        equipment = {k: v for k, v in self.equipment.items()}
+        vehicle_type = {k: v for k, v in self.vehicle_type.items()}
         supply_type = {k: v for k, v in self.supply_type.items()}
 
-        rn = rng.uniform(0, 1, size = len(self.equipment))
+        rn = rng.uniform(0, 1, size = len(self.vehicle_type))
 
-        for idx, (k, v) in enumerate(partner.equipment.items()):
+        for idx, (k, v) in enumerate(partner.vehicle_type.items()):
             if rn[idx] <= crossover_probability:
                 
-                equipment[k] = v
+                vehicle_type[k] = v
                 depot[k] = partner.depot[k]
                 supply_type[k] = partner.supply_type[k]
 
         child = Solution(network)
 
         child.successors = successors
-        child.equipment = equipment
+        child.vehicle_type = vehicle_type
         child.depot = depot
         child.supply_type = supply_type
 
         return child
 
-    def mutate(self, network, **kwargs):
-
-        # print('b', sum([v is None for v in self.successors.values()]))
-
-        # Inputs
-        mutation_probability = kwargs.get('mutation_probability', 0.)
-        rng = kwargs.get('rng', None)
+    def mutate(self, network, mutation_probability=0., rng=None, **kwargs):
 
         if rng is None:
 
@@ -277,12 +275,8 @@ class Solution():
 
             if conflict_target in network.trips._adj.get(conflict_source, []):
 
-                # print(conflict_target, conflict_source)
-
                 self.successors[conflict_source] = conflict_target
                 predecessors[conflict_target] = conflict_source
-
-        # print('c', sum([v is None for v in self.successors.values()]))
 
         # Adding depots as successors where successor trips are not defined
         for idx, source in enumerate(network.trips.nodes()):
@@ -290,44 +284,38 @@ class Solution():
 
                 self.successors[source] = 'depot'
 
-        # Mutating depot
-        # selected_depot = rng.choice(
-        #     rng.permutation(list(self.depot.values())), size = len(network.trips.nodes),
-        #     )
-
-        selected_depot = rng.choice(
-            self.depots, size = len(network.trips.nodes),
-            p = self.depot_probabilities
-            )
-
-        # Mutating equipment
-        # selected = rng.choice(
-        #     rng.permutation(list(self.equipment.values())), size = len(network.trips.nodes),
-        #     )
+        p = np.array(list(network.depot_probabilities.values()))
+        p /= p.sum()
+        selected_depot = rng.choice(network.depots, size = len(network.trips.nodes), p=p)
         
-        selected = rng.choice(
-            self.vehicle_types, size = len(network.trips.nodes),
-            p = self.vehicle_type_probabilities
-            )
+        selected_vehicle_type = pick_one_from_each_weighted(network.trip_vehicle_types, rng)
+
+        # print(np.array(selected_vehicle_type))
 
         # Mutating supply type
-        supply_type_choices = (
-            [network.vehicle_types[v].supply_types for v in selected]
-            )
+        supply_type_choices = [
+            [(s, network.supply_type_probabilities[s]) \
+            for s in network.vehicle_types[v].supply_types] \
+            for v in selected_vehicle_type
+            ]
 
-        supply_type_selections = pick_one_from_each(supply_type_choices, rng)
+        # print(supply_type_choices)
 
-        rn = rng.uniform(0, 1, size = len(self.equipment))
+        selected_supply_type = pick_one_from_each(supply_type_choices, rng)
 
-        for idx, source in enumerate(self.equipment.keys()):
+        print(selected_supply_type)
+
+        rn = rng.uniform(0, 1, size = len(self.vehicle_type))
+
+        for idx, source in enumerate(self.vehicle_type.keys()):
 
             if rn[idx] <= mutation_probability:
 
-                self.equipment[source] = selected[idx]
+                self.vehicle_type[source] = selected_vehicle_type[idx]
+                self.supply_type[source] = selected_supply_type[idx]
                 self.depot[source] = selected_depot[idx]
-                self.supply_type[source] = supply_type_selections[idx]
 
-    def generate_successors(self, network, rng = None):
+    def _generate_successors(self, network, rng = None):
 
         if rng is None:
 
@@ -359,315 +347,80 @@ class Solution():
 
         return successors
 
-    def generate_equipment(self, network, rng = None):
+    def _generate_vehicle_type(self, network, rng = None):
 
         if rng is None:
 
             rng = np.random.default_rng()
 
-        p = rng.uniform(0, 1, size = (len(network.vehicle_types)))
-        # p /= p.sum()
-        vehicle_type_prob = {k: p[i] for i, k in enumerate(network.vehicle_types.keys())}
+        selected = pick_one_from_each_weighted(network.trip_vehicle_types, rng)
 
-        all_vehicle_types = list(network.vehicle_types.keys())
-        vehicle_types = [
-             [(k, vehicle_type_prob[k]) for k in t.get('vehicle_types', all_vehicle_types)] \
-             for _, t in network.trips.nodes(data=True)
-            ]
+        vehicle_type = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
-        selected = pick_one_from_each_weighted(vehicle_types, rng)
+        return vehicle_type
 
-        equipment = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
-
-        return equipment
-
-    def generate_depot(self, network, rng = None):
+    def _generate_depot(self, network, rng = None):
 
         if rng is None:
 
             rng = np.random.default_rng()
 
-        p = rng.uniform(0, 1, size = (len(self.depots)))
+        p = np.array(list(network.depot_probabilities.values()))
         p /= p.sum()
 
-        selected = rng.choice(self.depots, size = len(network.trips.nodes), p = p)
+        selected = rng.choice(network.depots, size = len(network.trips.nodes), p=p)
 
         depot = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
         return depot
 
-    def generate_supply(self, network, equipment, rng = None):
+    def _generate_supply_type(self, network, rng = None):
         '''
-        For each peice of equipment, pick one of the available supply types
+        For each peice of vehicle_type, pick one of the available supply types
         '''
 
         if rng is None:
 
             rng = np.random.default_rng()
 
-        supply_type_choices = (
-            [network.vehicle_types[v].supply_types for v in equipment.values()]
-            )
+        selected = pick_one_from_each_weighted(network.trip_supply_types, rng)
 
-        supply_type_selections = pick_one_from_each(supply_type_choices, rng)
-
-        supply_type = {
-            k: supply_type_selections[i] for i, k in enumerate(equipment.keys())
-            }
+        supply_type = {s: selected[i] for i, s in enumerate(network.trips.nodes)}
 
         return supply_type
 
-    def generate(self, network, rng = None):
+    def _tours(self, **kwargs):
 
-        if rng is None:
+        predecessors = defaultdict(list)
 
-            rng = np.random.default_rng()
+        for k, v in self.successors.items():
 
-        self.successors = self.generate_successors(network, rng = rng)
-        self.equipment = self.generate_equipment(network, rng = rng)
-        self.depot = self.generate_depot(network, rng = rng)
-        self.supply_type = self.generate_supply(network, self.equipment, rng = rng)
+            predecessors[v].append(k)
 
-        return self
+        tours = []
 
-    def solve_and_evaluate(self, network, **kwargs):
-
-        self.solve(network, **kwargs)
-        self.evaluate(network)
-
-    def evaluate(self, network):
-
-        for k, objective in network.objectives.items():
-
-            self.fitness[k] = objective.evaluate_solution(network, self)
-
-        self.compliant = True
-
-        for k, constraint in network.constraints.items():
-
-            self.compliant = bool(
-                self.compliant * constraint.evaluate_solution(network, self)
-                )
-
-        # print(len(self.tours))
-
-    def solve(self, network, **kwargs):
-
-        self.vehicles.clear()
-        self.ports.clear()
-        self.tours = None
-        self.supply_events = None
-
-        # Recovering tours
-        tours = self._tours()
-        tours = self._voting(network, tours)
-        tours = self._vehicle_assignment(network, tours)
-
-        # Recovering supply events
-        supply_events = self._supply_events(tours)
-        supply_events = self._port_assignment(network, supply_events)
-
-        self.tours = tours
-        self.supply_events = supply_events
-
-    def _port_assignment(self, network, supply_events, **kwargs):
-
-        # Finding the earliest event time
-        earliest_event_start = min([s['earliest_start'] for s in supply_events])
-
-        # Creating heaps for buses at depots
-        port_type_heaps = {
-            d: {v: [] for v in network.port_types.keys()} for d in self.depots
-        }
-
-        # Loading events in to the heap by latest finish time
-        events_heap = []
+        heap = []
         c = count()
 
-        completed_events = []
+        heappush(heap, (0, next(c), 'depot', ['depot']))
 
-        for event in supply_events:
+        while heap:
 
-            heappush(events_heap, (event['latest_finish'], next(c), event))
+            tour_length, _, source, tour_trips = heappop(heap)
 
-        while events_heap:
+            if not predecessors[source]:
 
-            # Getting the next event
-            latest_finish, _, event = heappop(events_heap)
-
-            port_type = event['supply_type']
-
-            port_type_heap = (
-                port_type_heaps[event['depot']][port_type]
-                )
-
-            build_flag = True
-
-            # Checking for available port
-            if port_type_heap:
-
-                next_available_time, _, next_available_port = heappop(port_type_heap)
-
-                resupply_time = next_available_port.resupply_time(
-                    event['vehicle'], event['energy']
-                    )
-
-                finish_time = next_available_time + resupply_time
-
-                if finish_time <= latest_finish:
-
-                    event['port'] = next_available_port
-                    build_flag = False
-
-                    event['start'] = max([next_available_time, event['earliest_start']])
-                    event['finish'] = event['start'] + resupply_time
-
-                else:
-
-                    heappush(
-                        port_type_heap, (next_available_time, next(c), next_available_port)
-                        )
-
-            if build_flag:
-
-                # Create a new instance
-                event['port'] = network.port_types[port_type]
-                self.ports[event['depot']].append(event['port'])
-
-                resupply_time = event['port'].resupply_time(
-                    event['vehicle'], event['energy']
-                    )
-
-                finish_time = event['earliest_start'] + resupply_time
-
-                event['start'] = event['earliest_start']
-                event['finish'] = finish_time
-
-            # Adding the port to the heap
-            heappush(port_type_heap, (event['finish'], next(c), event['port']))
-
-            completed_events.append(event)
-
-        return completed_events
-
-    def _supply_events(self, tours, **kwargs):
-
-        vehicle_tours = defaultdict(list)
-
-        for idx, tour in enumerate(tours):
-
-            vehicle_tours[tour['vehicle_idx']].append(idx)
-
-        # Finding the earliest tour start time
-        schedule_start = min([t['start'] for t in tours])
-
-        # Recovering supply events
-
-        supply_events = []
-
-        for vehicle, tour_indices in vehicle_tours.items():
-            for tour_0_idx, tour_1_idx in pairwise(tour_indices):
-
-                event = {
-                    'vehicle': tours[tour_0_idx]['vehicle'],
-                    'vehicle_idx': tours[tour_0_idx]['vehicle_idx'],
-                    'supply_type': tours[tour_0_idx]['supply_type'],
-                    'depot': tours[tour_0_idx]['depot'],
-                    'earliest_start': tours[tour_0_idx]['finish'],
-                    'latest_finish': tours[tour_1_idx]['start'],
-                    'energy': tours[tour_0_idx]['energy'],
-                }
-
-                supply_events.append(event)
-
-            event = {
-                'vehicle': tours[tour_indices[-1]]['vehicle'],
-                'vehicle_idx': tours[tour_indices[-1]]['vehicle_idx'],
-                'supply_type': tours[tour_indices[-1]]['supply_type'],
-                'depot': tours[tour_indices[-1]]['depot'],
-                'earliest_start': tours[tour_indices[-1]]['finish'],
-                'latest_finish': 24 * 3600 + schedule_start,
-                'energy': tours[tour_indices[-1]]['energy'],
-                }
-
-            supply_events.append(event)
-
-        return supply_events
-
-    def _vehicle_assignment(self, network, tours, **kwargs):
-
-        # Finding the earliest tour start time
-        schedule_start = min([t['start'] for t in tours])
-
-        # Creating heaps for buses at depots
-        vehicle_type_heaps = {
-            d: {v: [] for v in network.vehicle_types.keys()} for d in self.depots
-        }
-
-        # Loading tours in to the tour heap by start time
-        tours_heap = []
-        c = count()
-        k = count()
-
-        completed_tours = []
-
-        for tour in tours:
-
-            heappush(tours_heap, (tour['start'], next(c), tour))
-
-        while tours_heap:
-
-            # Getting the next tour to depart
-            departure_time, _, tour = heappop(tours_heap)
-
-            # Assigning a vehicle
-            vehicle_type = tour['vehicle_type']
-            tour_depot = tour['depot']
-
-            vehicle_type_heap = vehicle_type_heaps[tour_depot][vehicle_type]
-
-            # Checking for available vehicle
-            if vehicle_type_heap:
-
-                next_available_time = vehicle_type_heap[0][0]
-
-                if next_available_time <= departure_time:
-
-                    _, _, tour['vehicle_idx'], tour['vehicle'] = heappop(
-                        vehicle_type_heap
-                        )
-
-                else:
-
-                    # Create a new instance
-                    tour['vehicle'] = network.vehicle_types[vehicle_type]
-                    tour['vehicle_idx'] = next(k)
-                    self.vehicles[tour_depot].append(tour['vehicle'])  
+                tours.append({'trips': tour_trips[:-1]})
 
             else:
 
-                # Create a new instance
-                tour['vehicle'] = network.vehicle_types[vehicle_type]
-                tour['vehicle_idx'] = next(k)
-                self.vehicles[tour_depot].append(tour['vehicle'])
+                for target in predecessors[source]:
 
-            # Adding minimum resupply time
-            supply_type = tour['supply_type']
-            resupply_time = network.port_types[supply_type].resupply_time(
-                tour['vehicle'], tour['energy']
-                )
+                    heappush(
+                        heap, (tour_length + 1, next(c), target, [target] + tour_trips)
+                        )
 
-            return_time = tour['finish'] + resupply_time
-
-            # Adding the vehicle to the heap
-            heappush(
-                vehicle_type_heap,
-                (return_time, next(c), tour['vehicle_idx'], tour['vehicle'])
-                )
-
-            completed_tours.append(tour)
-
-        return completed_tours
+        return tours
 
     def _voting(self, network, tours, **kwargs):
 
@@ -695,7 +448,7 @@ class Solution():
             tour = self._tour_information(network, tour)
 
             # Voting on vehicle type
-            trip_vehicle_types = [self.equipment[t] for t in tour['trips']]
+            trip_vehicle_types = [self.vehicle_type[t] for t in tour['trips']]
             selected_vehicle_type = Counter(trip_vehicle_types).most_common(1)[0][0]
             selected_vehicle_type_obj = network.vehicle_types[selected_vehicle_type]
 
@@ -750,55 +503,222 @@ class Solution():
             # Voting on supply type
             trip_supply_types = (
                 [self.supply_type[t] for t in tour['trips'] \
-                if self.equipment[t] == selected_vehicle_type]
+                if self.vehicle_type[t] == selected_vehicle_type]
                 )
             selected_supply_type = Counter(trip_supply_types).most_common(1)[0][0]
 
             tour['supply_type'] = selected_supply_type
+            
+            if network.lamarckian:
+                for trip in tour['trips']:
 
-            for trip in tour['trips']:
-
-                self.depot[trip] = selected_depot
-                self.equipment[trip] = selected_vehicle_type
-                self.supply_type[trip] = selected_supply_type
+                    self.depot[trip] = selected_depot
+                    self.vehicle_type[trip] = selected_vehicle_type
+                    self.supply_type[trip] = selected_supply_type
 
             feasible_tours.append(tour)
             
         return feasible_tours
+    
+    def _vehicle_assignment(self, network, tours, **kwargs):
 
-    def _tours(self, **kwargs):
+        # Finding the earliest tour start time
+        schedule_start = min([t['start'] for t in tours])
 
-        predecessors = defaultdict(list)
+        # Creating heaps for buses at depots
+        vehicle_type_heaps = {
+            d: {v: [] for v in network.vehicle_types.keys()} for d in network.depots
+        }
 
-        for k, v in self.successors.items():
-
-            predecessors[v].append(k)
-
-        tours = []
-
-        heap = []
+        # Loading tours in to the tour heap by start time
+        tours_heap = []
         c = count()
+        k = count()
 
-        heappush(heap, (0, next(c), 'depot', ['depot']))
+        completed_tours = []
 
-        while heap:
+        for tour in tours:
 
-            tour_length, _, source, tour_trips = heappop(heap)
+            heappush(tours_heap, (tour['start'], next(c), tour))
 
-            if not predecessors[source]:
+        while tours_heap:
 
-                tours.append({'trips': tour_trips[:-1]})
+            # Getting the next tour to depart
+            departure_time, _, tour = heappop(tours_heap)
+
+            # Assigning a vehicle
+            vehicle_type = tour['vehicle_type']
+            tour_depot = tour['depot']
+
+            vehicle_type_heap = vehicle_type_heaps[tour_depot][vehicle_type]
+
+            # Checking for available vehicle
+            if vehicle_type_heap:
+
+                next_available_time = vehicle_type_heap[0][0]
+
+                if next_available_time <= departure_time:
+
+                    _, _, tour['vehicle_idx'], tour['vehicle'] = heappop(
+                        vehicle_type_heap
+                        )
+
+                else:
+
+                    # Create a new instance
+                    tour['vehicle'] = network.vehicle_types[vehicle_type]
+                    tour['vehicle_idx'] = next(k)
+                    self.vehicles[tour_depot].append(tour['vehicle'])  
 
             else:
 
-                for target in predecessors[source]:
+                # Create a new instance
+                tour['vehicle'] = network.vehicle_types[vehicle_type]
+                tour['vehicle_idx'] = next(k)
+                self.vehicles[tour_depot].append(tour['vehicle'])
+
+            # Adding minimum resupply time
+            supply_type = tour['supply_type']
+            resupply_time = network.supply_types[supply_type].resupply_time(
+                tour['vehicle'], tour['energy']
+                )
+
+            return_time = tour['finish'] + resupply_time
+
+            # Adding the vehicle to the heap
+            heappush(
+                vehicle_type_heap,
+                (return_time, next(c), tour['vehicle_idx'], tour['vehicle'])
+                )
+
+            completed_tours.append(tour)
+
+        return completed_tours
+
+    def _supply_events(self, tours, **kwargs):
+
+        vehicle_tours = defaultdict(list)
+
+        for idx, tour in enumerate(tours):
+
+            vehicle_tours[tour['vehicle_idx']].append(idx)
+
+        # Finding the earliest tour start time
+        schedule_start = min([t['start'] for t in tours])
+
+        # Recovering supply events
+
+        supply_events = []
+
+        for vehicle, tour_indices in vehicle_tours.items():
+            for tour_0_idx, tour_1_idx in pairwise(tour_indices):
+
+                event = {
+                    'vehicle': tours[tour_0_idx]['vehicle'],
+                    'vehicle_idx': tours[tour_0_idx]['vehicle_idx'],
+                    'supply_type': tours[tour_0_idx]['supply_type'],
+                    'depot': tours[tour_0_idx]['depot'],
+                    'earliest_start': tours[tour_0_idx]['finish'],
+                    'latest_finish': tours[tour_1_idx]['start'],
+                    'energy': tours[tour_0_idx]['energy'],
+                }
+
+                supply_events.append(event)
+
+            event = {
+                'vehicle': tours[tour_indices[-1]]['vehicle'],
+                'vehicle_idx': tours[tour_indices[-1]]['vehicle_idx'],
+                'supply_type': tours[tour_indices[-1]]['supply_type'],
+                'depot': tours[tour_indices[-1]]['depot'],
+                'earliest_start': tours[tour_indices[-1]]['finish'],
+                'latest_finish': 24 * 3600 + schedule_start,
+                'energy': tours[tour_indices[-1]]['energy'],
+                }
+
+            supply_events.append(event)
+
+        return supply_events
+
+    def _port_assignment(self, network, supply_events, **kwargs):
+
+        # Finding the earliest event time
+        earliest_event_start = min([s['earliest_start'] for s in supply_events])
+
+        # Creating heaps for buses at depots
+        port_type_heaps = {
+            d: {v: [] for v in network.supply_types.keys()} for d in network.depots
+        }
+
+        # Loading events in to the heap by latest finish time
+        events_heap = []
+        c = count()
+
+        completed_events = []
+
+        for event in supply_events:
+
+            heappush(events_heap, (event['latest_finish'], next(c), event))
+
+        while events_heap:
+
+            # Getting the next event
+            latest_finish, _, event = heappop(events_heap)
+
+            port_type = event['supply_type']
+
+            port_type_heap = (
+                port_type_heaps[event['depot']][port_type]
+                )
+
+            build_flag = True
+
+            # Checking for available port
+            if port_type_heap:
+
+                next_available_time, _, next_available_port = heappop(port_type_heap)
+
+                resupply_time = next_available_port.resupply_time(
+                    event['vehicle'], event['energy']
+                    )
+
+                finish_time = next_available_time + resupply_time
+
+                if finish_time <= latest_finish:
+
+                    event['port'] = next_available_port
+                    build_flag = False
+
+                    event['start'] = max([next_available_time, event['earliest_start']])
+                    event['finish'] = event['start'] + resupply_time
+
+                else:
 
                     heappush(
-                        heap, (tour_length + 1, next(c), target, [target] + tour_trips)
+                        port_type_heap, (next_available_time, next(c), next_available_port)
                         )
 
-        return tours
+            if build_flag:
 
+                # Create a new instance
+                event['port'] = network.supply_types[port_type]
+                self.ports[event['depot']].append(event['port'])
+
+                resupply_time = event['port'].resupply_time(
+                    event['vehicle'], event['energy']
+                    )
+
+                finish_time = event['earliest_start'] + resupply_time
+
+                event['start'] = event['earliest_start']
+                event['finish'] = finish_time
+
+            # Adding the port to the heap
+            heappush(port_type_heap, (event['finish'], next(c), event['port']))
+
+            completed_events.append(event)
+
+        return completed_events
+    
     def _tour_information(self, network, tour, **kwargs):
 
         trips = network.trips
@@ -853,3 +773,8 @@ class Solution():
         tour['duration'] = duration
 
         return tour
+
+    @classmethod
+    def _increment(self):
+
+        self.idx += 1

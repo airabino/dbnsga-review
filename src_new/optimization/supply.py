@@ -36,6 +36,9 @@ class Port_Type():
 		# Operational cost (scaling with energy dispensed)
 		self.operational_cost = kwargs.get('operational_cost', 0)
 
+		# Probability for generation and mutation
+		self.probability = kwargs.get('probability', 1.0)
+
 	def resupply_time(self, vehicle, energy):
 
 		power = min([vehicle.resupply_rate, self.resupply_rate])

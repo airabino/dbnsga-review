@@ -5,26 +5,23 @@ class Constraint():
     An objective is used to evaluate a solution
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(self, penalty=1, **kwargs):
 
-        self.rigid = kwargs.get('rigid', True)
+        self.penalty = penalty
 
-    def evaluate_tour(self, network, tour):
+    def evaluate(self, network, solution):
 
-        return True
-
-    def evaluate_solution(self, network, solution):
-
-        return True
+        return 0
 
 class Fleet_Portion(Constraint):
 
-    def __init__(self, **kwargs):
+    def __init__(self, included=[], portion=0, penalty=1, **kwargs):
 
-        self.included = kwargs.get('included', [])
-        self.portion = kwargs.get('portion', [])
+        self.included = included
+        self.portion = portion
+        self.penalty = penalty
 
-    def evaluate_solution(self, network, solution):
+    def evaluate(self, network, solution):
 
         n_included = 0
         n_total = 0
@@ -41,51 +38,42 @@ class Fleet_Portion(Constraint):
 
         compliant = n_included / n_total >= self.portion
 
-        return compliant
+        return self.penalty * (not compliant)
 
 class Port_Limit(Constraint):
 
-    def __init__(self, **kwargs):
+    def __init__(self, sizes={}, penalty=1, **kwargs):
 
-        self.sizes = kwargs.get('sizes', {})
+        self.sizes = sizes
+        self.penalty = penalty
 
-    def evaluate_solution(self, network, solution):
+    def evaluate(self, network, solution):
 
-        compliant = True
+        penalty = 0
 
         for depot, ports in solution.ports.items():
 
             if len(ports) > self.sizes.get(depot, np.inf):
 
-                compliant = False
+                penalty += self.penalty
 
-        return compliant
+        return penalty
 
 class Lot_Size_Limit(Constraint):
 
-    def __init__(self, **kwargs):
+    def __init__(self, sizes={}, penalty=1, **kwargs):
 
-        self.sizes = kwargs.get('sizes', {})
+        self.sizes = sizes
+        self.penalty = penalty
 
-    def evaluate_solution(self, network, solution):
+    def evaluate(self, network, solution):
 
-        compliant = True
+        penalty = 0
 
         for depot, vehicles in solution.vehicles.items():
 
-            # print(depot, len(vehicles))
-
             if len(vehicles) > self.sizes.get(depot, np.inf):
 
-                compliant = False
+                penalty += self.penalty
 
-        # print(compliant)
-
-        return compliant
-
-
-class Energy(Constraint):
-
-    def evaluate_tour(self, network, tour):
-
-        return tour['energy'] <= tour['vehicle'].capacity
+        return penalty
